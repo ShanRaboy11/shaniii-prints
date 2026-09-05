@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Plus,
   Search,
@@ -9,6 +9,9 @@ import {
   Printer,
   Download,
   QrCode,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useToast } from '@/components/ToastProvider';
@@ -43,6 +46,11 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | PrintType>('all');
   const [filterPaper, setFilterPaper] = useState<'all' | PaperSize>('all');
+
+  // Pagination (20 records per page) + mobile expanded card
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   function openAdd() { setEditingTx(null); setShowForm(true); }
   function openEdit(tx: TransactionRecord) { setEditingTx(tx); setShowForm(true); }
@@ -85,6 +93,13 @@ export default function TransactionsPage() {
     }
     return true;
   });
+
+  // Reset to first page whenever the filters/search change.
+  useEffect(() => { setPage(1); }, [searchQuery, filterType, filterPaper]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTx.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTx = filteredTx.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -195,72 +210,153 @@ export default function TransactionsPage() {
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{transactions.length === 0 ? 'Add your first order.' : 'Try different filters.'}</p>
         </div>
       ) : (
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Type</th>
-                <th>Paper</th>
-                <th>Qty</th>
-                <th>Final</th>
-                <th>Ink Cost</th>
-                <th>Adj.</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTx.map((tx) => {
-                const d = new Date(tx.created_at || '');
-                return (
-                  <tr key={tx.id}>
-                    <td>
-                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                      <div className="text-[11px] text-slate-400">{d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
-                    </td>
-                    <td className="text-sm text-slate-600 dark:text-slate-300">{tx.customer_name || <span className="text-slate-400">Walk-in</span>}</td>
-                    <td><span className={`badge ${tx.print_type === 'print' ? 'badge-print' : 'badge-photocopy'}`}>{tx.print_type}</span></td>
-                    <td>
-                      <span className="badge badge-paper">{PAPER_TYPE_LABELS[tx.paper_size as PaperType] || tx.paper_size}</span>
-                      {tx.is_colored && <span className="badge bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 ml-1">CLR</span>}
-                    </td>
-                    <td className="font-semibold">{tx.quantity}</td>
-                    <td className="font-bold text-slate-900 dark:text-white">₱{tx.final_total}</td>
-                    <td className="text-xs text-slate-400">₱{tx.estimated_ink_cost.toFixed(2)}</td>
-                    <td>
-                      {tx.adjustment !== 0 ? (
-                        <span className={`badge ${tx.adjustment < 0 ? 'badge-discount' : 'badge-additional'}`}>{tx.adjustment < 0 ? `-₱${Math.abs(tx.adjustment)}` : `+₱${tx.adjustment}`}</span>
-                      ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
-                    </td>
-                    <td>
-                      <div className="flex items-center justify-end gap-1">
+        <>
+          {/* ===== Desktop table (hidden on mobile) — center-aligned ===== */}
+          <div className="table-wrapper hidden md:block">
+            <table className="table text-center">
+              <thead>
+                <tr>
+                  <th className="text-center">Date</th>
+                  <th className="text-center">Customer</th>
+                  <th className="text-center">Type</th>
+                  <th className="text-center">Paper</th>
+                  <th className="text-center">Qty</th>
+                  <th className="text-center">Final</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedTx.map((tx) => {
+                  const d = new Date(tx.created_at || '');
+                  return (
+                    <tr key={tx.id}>
+                      <td className="text-center">
+                        <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                        <div className="text-[11px] text-slate-400">{d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                      </td>
+                      <td className="text-center text-sm text-slate-600 dark:text-slate-300">{tx.customer_name || <span className="text-slate-400">Walk-in</span>}</td>
+                      <td className="text-center"><span className={`badge ${tx.print_type === 'print' ? 'badge-print' : 'badge-photocopy'}`}>{tx.print_type}</span></td>
+                      <td className="text-center"><span className="badge badge-paper">{PAPER_TYPE_LABELS[tx.paper_size as PaperType] || tx.paper_size}</span></td>
+                      <td className="text-center font-semibold">{tx.quantity}</td>
+                      <td className="text-center font-bold text-slate-900 dark:text-white">₱{tx.final_total}</td>
+                      <td className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {tx.receipt_id && (
+                            <button onClick={() => { setQrReceiptId(tx.receipt_id!); setShowQR(true); }} className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Show QR">
+                              <QrCode className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => openEdit(tx)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(tx.id!)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ===== Mobile collapsible cards (hidden on desktop) ===== */}
+          <div className="md:hidden space-y-2.5">
+            {pagedTx.map((tx) => {
+              const d = new Date(tx.created_at || '');
+              const isExpanded = expandedId === tx.id;
+              return (
+                <div key={tx.id} className="glass-card overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : tx.id!)}
+                    className="w-full flex items-center justify-between gap-3 p-4 text-left"
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                        {tx.customer_name || 'Walk-in'}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">₱{tx.final_total}</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-1 border-t border-slate-100/70 dark:border-white/5 space-y-2.5 animate-fade-in">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Type</span>
+                        <span className={`badge ${tx.print_type === 'print' ? 'badge-print' : 'badge-photocopy'}`}>{tx.print_type}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Paper</span>
+                        <span className="badge badge-paper">{PAPER_TYPE_LABELS[tx.paper_size as PaperType] || tx.paper_size}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Copies</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{tx.quantity}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Final</span>
+                        <span className="font-bold text-slate-900 dark:text-white">₱{tx.final_total}</span>
+                      </div>
+                      {tx.notes && (
+                        <div className="flex items-start justify-between text-sm gap-3">
+                          <span className="text-slate-500 dark:text-slate-400 flex-shrink-0">Notes</span>
+                          <span className="text-slate-600 dark:text-slate-300 text-right">{tx.notes}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-end gap-1 pt-1">
                         {tx.receipt_id && (
-                          <button onClick={() => { setQrReceiptId(tx.receipt_id!); setShowQR(true); }} className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Show QR">
-                            <QrCode className="w-3.5 h-3.5" />
+                          <button onClick={() => { setQrReceiptId(tx.receipt_id!); setShowQR(true); }} className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Show QR">
+                            <QrCode className="w-4 h-4" />
                           </button>
                         )}
-                        <button onClick={() => openEdit(tx)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
-                          <Edit3 className="w-3.5 h-3.5" />
+                        <button onClick={() => openEdit(tx)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
+                          <Edit3 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(tx.id!)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
-                          <Trash2 className="w-3.5 h-3.5" />
+                        <button onClick={() => handleDelete(tx.id!)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-      {filteredTx.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-slate-500 dark:text-slate-400">{filteredTx.length} order{filteredTx.length !== 1 ? 's' : ''}</span>
-          <span className="font-semibold text-slate-800 dark:text-white">Total: ₱{filteredTx.reduce((s, t) => s + t.final_total, 0).toLocaleString()}</span>
-        </div>
+          {/* ===== Pagination (20 per page) ===== */}
+          {totalPages > 1 && (
+            <div className="mt-5 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-9 h-9 rounded-full flex items-center justify-center btn-ghost !p-0 disabled:opacity-40"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300 px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-9 h-9 rounded-full flex items-center justify-center btn-ghost !p-0 disabled:opacity-40"
+                aria-label="Next page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

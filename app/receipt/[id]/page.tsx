@@ -134,7 +134,7 @@ export default function ReceiptPage() {
         <div class="divider"></div>
         <div class="section">
           <div class="row"><span class="row-label">Subtotal</span><span class="row-value">₱${transaction.computed_total}</span></div>
-          ${transaction.adjustment !== 0 ? `<div class="row"><span class="row-label">${transaction.adjustment_label}</span><span class="adjustment">${transaction.adjustment < 0 ? '-' : '+'}₱${Math.abs(transaction.adjustment)}</span></div>` : ''}
+          ${transaction.adjustment < 0 ? `<div class="row"><span class="row-label">Discount</span><span class="adjustment">-₱${Math.abs(transaction.adjustment)}</span></div>` : ''}
         </div>
         <div class="total-row row">
           <span class="row-label">TOTAL</span>
@@ -242,13 +242,12 @@ export default function ReceiptPage() {
                 <span className="font-medium text-slate-700 dark:text-slate-200">₱{transaction.computed_total}</span>
               </div>
 
-              {transaction.adjustment !== 0 && (
+              {/* Only discounts are shown on the receipt; additional fees are omitted. */}
+              {transaction.adjustment < 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className={transaction.adjustment < 0 ? 'text-orange-500' : 'text-accent-500'}>
-                    {transaction.adjustment_label}
-                  </span>
-                  <span className={`font-medium ${transaction.adjustment < 0 ? 'text-orange-500' : 'text-accent-500'}`}>
-                    {transaction.adjustment < 0 ? '-' : '+'}₱{Math.abs(transaction.adjustment)}
+                  <span className="text-orange-500">Discount</span>
+                  <span className="font-medium text-orange-500">
+                    -₱{Math.abs(transaction.adjustment)}
                   </span>
                 </div>
               )}

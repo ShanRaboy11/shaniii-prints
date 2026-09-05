@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DatePickerProps {
@@ -47,10 +48,32 @@ function sameDay(a: Date, b: Date): boolean {
  */
 export function DatePicker({ value, onChange, id, className = '' }: DatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ left: number; top: number; openUp: boolean } | null>(null);
 
   const selected = parseYMD(value);
   const today = new Date();
+
+  useEffect(() => setMounted(true), []);
+
+  // Anchor the portaled panel to the trigger; flip up if little space below.
+  function reposition() {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const PANEL_H = 360; // approx calendar height
+    const spaceBelow = window.innerHeight - r.bottom;
+    const openUp = spaceBelow < PANEL_H && r.top > spaceBelow;
+    setRect({ left: r.left, top: openUp ? r.top : r.bottom, openUp });
+  }
+
+  useLayoutEffect(() => {
+    if (open) reposition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Month currently shown in the calendar grid.
   const [viewYear, setViewYear] = useState<number>((selected || today).getFullYear());
@@ -66,19 +89,31 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!open) return;
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(t) &&
+        panelRef.current && !panelRef.current.contains(t)
+      ) {
+        setOpen(false);
+      }
     }
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
+    function handleReflow() { reposition(); }
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
+    window.addEventListener('resize', handleReflow);
+    window.addEventListener('scroll', handleReflow, true);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('resize', handleReflow);
+      window.removeEventListener('scroll', handleReflow, true);
     };
-  }, []);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function prevMonth() {
     setViewMonth((m) => {
@@ -114,6 +149,7 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
     <div ref={containerRef} className={`relative ${className}`}>
       <button
         id={id}
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="dropdown-trigger"
@@ -126,8 +162,18 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
         </span>
       </button>
 
-      {open && (
-        <div className="dropdown-panel !p-3 w-72" role="dialog">
+      {open && mounted && rect && createPortal(
+        <div
+          ref={panelRef}
+          className="dropdown-panel !fixed !mt-0 !p-3 w-72"
+          role="dialog"
+          style={{
+            left: rect.left,
+            ...(rect.openUp
+              ? { bottom: window.innerHeight - rect.top + 6 }
+              : { top: rect.top + 6 }),
+          }}
+        >
           {/* Month navigation */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button
@@ -196,7 +242,8 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
               Today
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -50,8 +50,10 @@ export default function ExpensesPage() {
   const [fEntryType, setFEntryType] = useState<EntryType>('expense');
   const [fItem, setFItem] = useState('');
   const [fCategory, setFCategory] = useState('general');
-  const [fQuantity, setFQuantity] = useState(1);
-  const [fUnitPrice, setFUnitPrice] = useState(0);
+  // Numeric fields as strings so users can type/clear freely (no forced 0,
+  // no persistent leading zeros). Parsed to numbers on demand.
+  const [fQuantity, setFQuantity] = useState('1');
+  const [fUnitPrice, setFUnitPrice] = useState('0');
   const [fDate, setFDate] = useState('');
   const [fNotes, setFNotes] = useState('');
 
@@ -63,7 +65,9 @@ export default function ExpensesPage() {
     setFDate(new Date().toISOString().split('T')[0]);
   }
 
-  const totalCost = fQuantity * fUnitPrice;
+  const quantityNum = Math.max(1, parseInt(fQuantity, 10) || 1);
+  const unitPriceNum = fUnitPrice.trim() === '' ? 0 : parseFloat(fUnitPrice) || 0;
+  const totalCost = quantityNum * unitPriceNum;
   const categoryOptions = (fEntryType === 'capital' ? CAPITAL_CATEGORIES : EXPENSE_CATEGORIES).map((c) => ({
     value: c.value,
     label: c.label,
@@ -79,8 +83,8 @@ export default function ExpensesPage() {
     setFEntryType('expense');
     setFItem('');
     setFCategory('general');
-    setFQuantity(1);
-    setFUnitPrice(0);
+    setFQuantity('1');
+    setFUnitPrice('0');
     setFNotes('');
     setEditingId(null);
     setToday();
@@ -95,8 +99,8 @@ export default function ExpensesPage() {
     setFEntryType(exp.entry_type);
     setFItem(exp.item_name);
     setFCategory(exp.category);
-    setFQuantity(exp.quantity);
-    setFUnitPrice(exp.unit_price);
+    setFQuantity(String(exp.quantity));
+    setFUnitPrice(String(exp.unit_price));
     setFDate((exp.date_bought || '').split('T')[0]);
     setFNotes(exp.notes || '');
     setEditingId(exp.id || null);
@@ -119,8 +123,8 @@ export default function ExpensesPage() {
       item_name: fItem.trim(),
       category: fCategory,
       entry_type: fEntryType,
-      quantity: fQuantity,
-      unit_price: fUnitPrice,
+      quantity: quantityNum,
+      unit_price: unitPriceNum,
       total_cost: totalCost,
       date_bought: fDate,
       notes: fNotes || undefined,
@@ -394,13 +398,30 @@ export default function ExpensesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Quantity</label>
-                    <input type="number" min="1" value={fQuantity} onChange={(e) => setFQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="input-soft text-center font-bold" />
+                    <input
+                      type="number"
+                      min="1"
+                      inputMode="numeric"
+                      value={fQuantity}
+                      onChange={(e) => setFQuantity(e.target.value)}
+                      onBlur={() => setFQuantity((v) => (v.trim() === '' ? '1' : String(Math.max(1, parseInt(v, 10) || 1))))}
+                      className="input-soft text-center font-bold"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Unit Price</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 z-10">₱</span>
-                      <input type="number" min="0" step="0.5" value={fUnitPrice} onChange={(e) => setFUnitPrice(parseFloat(e.target.value) || 0)} className="input-soft pl-8 font-bold" />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        inputMode="decimal"
+                        value={fUnitPrice}
+                        onChange={(e) => setFUnitPrice(e.target.value)}
+                        onBlur={() => setFUnitPrice((v) => (v.trim() === '' ? '0' : String(parseFloat(v) || 0)))}
+                        className="input-soft pl-8 font-bold"
+                      />
                     </div>
                   </div>
                 </div>
@@ -421,7 +442,7 @@ export default function ExpensesPage() {
 
               {/* Total preview */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-primary-500/10 to-accent-500/10 border border-primary-400/25 dark:border-primary-400/20">
-                <span className="text-sm text-slate-500 dark:text-slate-400">{fQuantity} × ₱{fUnitPrice.toLocaleString()}</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">{quantityNum} × ₱{unitPriceNum.toLocaleString()}</span>
                 <span className="text-lg font-extrabold text-slate-900 dark:text-white">₱{totalCost.toLocaleString()}</span>
               </div>
 

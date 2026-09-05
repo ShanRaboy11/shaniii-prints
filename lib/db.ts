@@ -25,14 +25,9 @@ export type PaperType =
   | 'short'
   | 'a4'
   | 'long'
-  | 'photopaper'
   | 'bond'
-  | 'glossy_photo'
-  | 'matte_photo'
-  | 'cardstock'
-  | 'sticker'
-  | 'kraft'
-  | 'vellum';
+  | 'photopaper'
+  | 'sticker';
 
 export interface TransactionRecord {
   id?: string;
@@ -101,17 +96,12 @@ export const PRINTER_PRESETS: Record<string, { label: string; bw_yield: number; 
 // Comprehensive set of paper stocks. `size` papers are the standard cut sizes;
 // `specialty` papers are premium stocks that are print-only (not for photocopy).
 export const PAPER_TYPES: { value: PaperType; label: string; specialty: boolean }[] = [
-  { value: 'short', label: 'Short (Letter)', specialty: false },
-  { value: 'a4', label: 'A4', specialty: false },
-  { value: 'long', label: 'Long (Legal)', specialty: false },
-  { value: 'bond', label: 'Bond Paper', specialty: false },
-  { value: 'photopaper', label: 'Photo Paper', specialty: true },
-  { value: 'glossy_photo', label: 'Glossy Photo Paper', specialty: true },
-  { value: 'matte_photo', label: 'Matte Photo Paper', specialty: true },
-  { value: 'cardstock', label: 'Cardstock', specialty: true },
-  { value: 'sticker', label: 'Sticker Paper', specialty: true },
-  { value: 'kraft', label: 'Kraft Paper', specialty: true },
-  { value: 'vellum', label: 'Vellum', specialty: true },
+  { value: 'short', label: 'short', specialty: false },
+  { value: 'a4', label: 'a4', specialty: false },
+  { value: 'long', label: 'long', specialty: false },
+  { value: 'bond', label: 'bond', specialty: false },
+  { value: 'photopaper', label: 'photopaper', specialty: true },
+  { value: 'sticker', label: 'sticker', specialty: true },
 ];
 
 export const PAPER_TYPE_LABELS: Record<PaperType, string> = PAPER_TYPES.reduce(
@@ -123,14 +113,10 @@ export const PAPER_TYPE_LABELS: Record<PaperType, string> = PAPER_TYPES.reduce(
 // B&W: standard sizes 3-4 | Colored: standard sizes 5-6 | specialty stocks priced per sheet.
 export const PRICING = {
   bw: {
-    short: 3, a4: 4, long: 4, bond: 3,
-    photopaper: 15, glossy_photo: 18, matte_photo: 18,
-    cardstock: 10, sticker: 12, kraft: 8, vellum: 12,
+    short: 3, a4: 4, long: 4, bond: 3, photopaper: 15, sticker: 12,
   },
   colored: {
-    short: 5, a4: 6, long: 6, bond: 5,
-    photopaper: 40, glossy_photo: 45, matte_photo: 45,
-    cardstock: 25, sticker: 30, kraft: 20, vellum: 28,
+    short: 5, a4: 6, long: 6, bond: 5, photopaper: 40, sticker: 30,
   },
 } as const;
 

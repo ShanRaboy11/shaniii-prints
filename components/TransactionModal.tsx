@@ -70,12 +70,21 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
   const [fType, setFType] = useState<PrintType>('print');
   const [fPaper, setFPaper] = useState<PaperSize>('short');
   const [fColored, setFColored] = useState(false);
-  const [fCopies, setFCopies] = useState(1);
+  // Numeric fields are stored as raw strings so the user can freely type/clear
+  // them (no forced leading zero, empty allowed). Parsed to numbers on demand.
+  const [fCopies, setFCopies] = useState('1');
   const [fCustomer, setFCustomer] = useState('');
   const [fDate, setFDate] = useState('');
   const [fTime, setFTime] = useState('');
   const [fNotes, setFNotes] = useState('');
-  const [fFinal, setFFinal] = useState(0);
+  const [fFinal, setFFinal] = useState('0');
+  // Tracks whether the user has manually edited the final price this session,
+  // so auto-sync with the computed total stops once they take control.
+  const [finalDirty, setFinalDirty] = useState(false);
+
+  // Numeric derivations (empty / invalid → sensible fallback).
+  const copiesNum = Math.max(1, parseInt(fCopies, 10) || 1);
+  const finalNum = fFinal.trim() === '' ? 0 : parseFloat(fFinal) || 0;
 
   function setNowDateTime() {
     const now = new Date();
@@ -91,36 +100,39 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
       setFType(editingTx.print_type as PrintType);
       setFPaper(editingTx.paper_size as PaperSize);
       setFColored(editingTx.is_colored);
-      setFCopies(editingTx.quantity);
+      setFCopies(String(editingTx.quantity));
       setFCustomer(editingTx.customer_name || '');
       setFDate(d.toISOString().split('T')[0]);
       setFTime(d.toTimeString().slice(0, 5));
       setFNotes(editingTx.notes || '');
-      setFFinal(editingTx.final_total);
+      setFFinal(String(editingTx.final_total));
+      setFinalDirty(true); // keep the saved final price as-is when editing
     } else {
       setFType('print');
       setFPaper('short');
       setFColored(false);
-      setFCopies(1);
+      setFCopies('1');
       setFCustomer('');
       setFNotes('');
-      setFFinal(0);
+      setFFinal('0');
+      setFinalDirty(false);
       setNowDateTime();
     }
   }, [open, editingTx]);
 
   // Computed price
   const pricePerCopy = getDefaultPrice(fPaper, fColored);
-  const computedTotal = pricePerCopy * fCopies;
-  const inkCost = estimateInkCost(settings, fCopies, fColored);
-  const paperCost = estimatePaperCost(settings, fCopies);
-  const adjustment = fFinal - computedTotal;
+  const computedTotal = pricePerCopy * copiesNum;
+  const inkCost = estimateInkCost(settings, copiesNum, fColored);
+  const paperCost = estimatePaperCost(settings, copiesNum);
+  const adjustment = finalNum - computedTotal;
   const adjustmentLabel = adjustment < 0 ? 'Discount' : adjustment > 0 ? 'Additional' : '';
 
-  // Sync finalTotal with computed when in add mode
+  // Auto-sync the final price with the computed total until the user manually
+  // edits it (then we respect their value).
   useEffect(() => {
-    if (formMode === 'add') setFFinal(computedTotal);
-  }, [computedTotal, formMode]);
+    if (formMode === 'add' && !finalDirty) setFFinal(String(computedTotal));
+  }, [computedTotal, formMode, finalDirty]);
 
   // Validate paper when type changes
   useEffect(() => {
@@ -143,10 +155,10 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
       paper_size: fPaper,
       print_type: fType,
       is_colored: fColored,
-      quantity: fCopies,
+      quantity: copiesNum,
       price_per_copy: pricePerCopy,
       computed_total: computedTotal,
-      final_total: fFinal,
+      final_total: finalNum,
       adjustment,
       adjustment_label: adjustmentLabel,
       estimated_ink_cost: parseFloat(inkCost.toFixed(4)),
@@ -290,7 +302,17 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                     </label>
                   </div>
                   <div>
-                    <input aria-label="Copies" type="number" min="1" value={fCopies} onChange={(e) => setFCopies(Math.max(1, parseInt(e.target.value) || 1))} className="input-soft text-center text-lg font-bold" placeholder="Copies" />
+                    <input
+                      aria-label="Copies"
+                      type="number"
+                      min="1"
+                      inputMode="numeric"
+                      value={fCopies}
+                      onChange={(e) => setFCopies(e.target.value)}
+                      onBlur={() => setFCopies((v) => (v.trim() === '' ? '1' : String(Math.max(1, parseInt(v, 10) || 1))))}
+                      className="input-soft text-center text-lg font-bold"
+                      placeholder="Copies"
+                    />
                   </div>
                 </div>
               </div>
@@ -335,7 +357,16 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                   <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Final Price (editable)</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 z-10">₱</span>
-                    <input type="number" min="0" step="0.5" value={fFinal} onChange={(e) => setFFinal(parseFloat(e.target.value) || 0)} className="input-soft pl-8 text-lg font-bold text-center" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      inputMode="decimal"
+                      value={fFinal}
+                      onChange={(e) => { setFinalDirty(true); setFFinal(e.target.value); }}
+                      onBlur={() => setFFinal((v) => (v.trim() === '' ? '0' : String(parseFloat(v) || 0)))}
+                      className="input-soft pl-8 text-lg font-bold text-center"
+                    />
                   </div>
                 </div>
 

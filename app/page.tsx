@@ -16,20 +16,19 @@ import {
 import { Reveal } from '@/components/Reveal';
 import { Footer } from '@/components/Footer';
 import { MarketingHeader } from '@/components/MarketingHeader';
-import { AnimatedDotGrid } from '@/components/AnimatedDotGrid';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#05070e] overflow-hidden">
-      {/* Interactive dot-matrix background — fixed behind the whole page */}
+      {/* Decorative background — fixed behind the whole page.
+          (Dot-matrix intentionally omitted from the landing page.) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        {/* Extra animated gradient blobs + floating decorative rings for depth */}
+        {/* Animated gradient blobs + floating decorative rings for depth */}
         <div className="absolute -top-24 -left-24 w-[30rem] h-[30rem] rounded-full bg-primary-500/10 dark:bg-primary-500/25 blur-3xl animate-float" />
         <div className="absolute top-1/3 -right-28 w-[34rem] h-[34rem] rounded-full bg-accent-500/10 dark:bg-accent-500/22 blur-3xl" style={{ animation: 'floatX 13s ease-in-out infinite' }} />
         <div className="absolute -bottom-32 left-1/4 w-[28rem] h-[28rem] rounded-full bg-indigo-500/8 dark:bg-indigo-500/20 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
         <div className="deco-ring w-72 h-72 top-24 right-[12%]" style={{ animation: 'spinSlow 60s linear infinite' }} />
         <div className="deco-ring w-52 h-52 bottom-32 left-[8%]" style={{ animation: 'spinSlow 48s linear infinite reverse' }} />
-        <AnimatedDotGrid />
       </div>
 
       {/* ========== HEADER — shared marketing header (matches login) ========== */}
