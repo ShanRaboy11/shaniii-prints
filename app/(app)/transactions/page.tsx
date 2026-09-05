@@ -18,10 +18,13 @@ import { TransactionModal } from '@/components/TransactionModal';
 import { useOwnerData } from '@/lib/useOwnerData';
 import {
   TransactionRecord,
+  PaperType,
+  PAPER_TYPES,
+  PAPER_TYPE_LABELS,
   deleteTransactionDB,
 } from '@/lib/db';
 
-type PaperSize = 'short' | 'a4' | 'long' | 'photopaper';
+type PaperSize = PaperType;
 type PrintType = 'print' | 'photocopy';
 
 export default function TransactionsPage() {
@@ -171,15 +174,12 @@ export default function TransactionsPage() {
             ]}
           />
           <Dropdown
-            className="w-40"
+            className="w-44"
             value={filterPaper}
             onChange={(v) => setFilterPaper(v as 'all' | PaperSize)}
             options={[
               { value: 'all', label: 'All Paper' },
-              { value: 'short', label: 'Short' },
-              { value: 'a4', label: 'A4' },
-              { value: 'long', label: 'Long' },
-              { value: 'photopaper', label: 'Photo' },
+              ...PAPER_TYPES.map((p) => ({ value: p.value, label: p.label })),
             ]}
           />
         </div>
@@ -222,7 +222,7 @@ export default function TransactionsPage() {
                     <td className="text-sm text-slate-600 dark:text-slate-300">{tx.customer_name || <span className="text-slate-400">Walk-in</span>}</td>
                     <td><span className={`badge ${tx.print_type === 'print' ? 'badge-print' : 'badge-photocopy'}`}>{tx.print_type}</span></td>
                     <td>
-                      <span className={`badge badge-${tx.paper_size}`}>{tx.paper_size === 'photopaper' ? 'Photo' : tx.paper_size}</span>
+                      <span className="badge badge-paper">{PAPER_TYPE_LABELS[tx.paper_size as PaperType] || tx.paper_size}</span>
                       {tx.is_colored && <span className="badge bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 ml-1">CLR</span>}
                     </td>
                     <td className="font-semibold">{tx.quantity}</td>

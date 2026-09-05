@@ -18,6 +18,8 @@ import { TimePicker } from '@/components/TimePicker';
 import {
   TransactionRecord,
   BusinessSettings,
+  PaperType,
+  PAPER_TYPES,
   getDefaultPrice,
   estimateInkCost,
   estimatePaperCost,
@@ -25,12 +27,15 @@ import {
   updateTransactionDB,
 } from '@/lib/db';
 
-type PaperSize = 'short' | 'a4' | 'long' | 'photopaper';
+type PaperSize = PaperType;
 type PrintType = 'print' | 'photocopy';
 
-// Valid paper sizes per type (no photopaper for photocopy)
+// Valid papers per print type. Photocopy only supports standard (non-specialty)
+// stocks; full printing supports the complete paper catalog.
 function getValidPapers(type: PrintType): PaperSize[] {
-  return type === 'photocopy' ? ['short', 'a4', 'long'] : ['short', 'a4', 'long', 'photopaper'];
+  return type === 'photocopy'
+    ? PAPER_TYPES.filter((p) => !p.specialty).map((p) => p.value)
+    : PAPER_TYPES.map((p) => p.value);
 }
 
 interface TransactionModalProps {
@@ -230,114 +235,115 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
-              {/* Customer Name */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Customer Name <span className="normal-case text-slate-400">(optional)</span></label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
-                  <input type="text" value={fCustomer} onChange={(e) => setFCustomer(e.target.value)} placeholder="Walk-in" className="input-soft pl-10" />
-                </div>
-              </div>
+              {/* ── Section: Order Details ── */}
+              <div className="modal-section space-y-4">
+                <p className="modal-section-title">Order Details</p>
 
-              {/* Type of Print */}
-              <div>
-                <label htmlFor="type-of-print" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Type of Print
-                </label>
-                <Dropdown
-                  id="type-of-print"
-                  value={fType}
-                  onChange={(v) => setFType(v as PrintType)}
-                  options={[
-                    { value: 'print', label: 'Print' },
-                    { value: 'photocopy', label: 'Photocopy' },
-                  ]}
-                />
-              </div>
-
-              {/* Type of Paper */}
-              <div>
-                <label htmlFor="type-of-paper" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Type of Paper
-                </label>
-                <Dropdown
-                  id="type-of-paper"
-                  value={fPaper}
-                  onChange={(v) => setFPaper(v as PaperSize)}
-                  options={validPapers.map((s) => ({
-                    value: s,
-                    label: s === 'photopaper' ? 'Photo Paper' : s.toUpperCase(),
-                  }))}
-                />
-              </div>
-
-              {/* Colored */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/10">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Colored</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" checked={fColored} onChange={(e) => setFColored(e.target.checked)} className="sr-only peer" />
-                  <div className="w-10 h-5 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-primary-500 peer-checked:to-accent-500" />
-                </label>
-              </div>
-
-              {/* Copies */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Copies</label>
-                <input type="number" min="1" value={fCopies} onChange={(e) => setFCopies(Math.max(1, parseInt(e.target.value) || 1))} className="input-soft text-center text-lg font-bold" />
-              </div>
-
-              {/* Date/Time — custom rounded pickers */}
-              <div className="grid grid-cols-2 gap-3">
+                {/* Customer Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Date</label>
-                  <DatePicker value={fDate} onChange={setFDate} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Time</label>
-                  <TimePicker value={fTime} onChange={setFTime} />
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
-                <input type="text" value={fNotes} onChange={(e) => setFNotes(e.target.value)} placeholder="Special instructions..." className="input-soft" />
-              </div>
-
-              {/* Pricing Breakdown */}
-              <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 overflow-hidden bg-slate-50/40 dark:bg-white/[0.02]">
-                <div className="bg-slate-50/80 dark:bg-white/[0.04] px-4 py-2.5 border-b border-slate-200/60 dark:border-white/5">
-                  <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pricing</p>
-                </div>
-                <div className="p-4 space-y-2.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 dark:text-slate-400">{fCopies} × ₱{pricePerCopy} <span className="text-[10px]">({fColored ? 'color' : 'b&w'})</span></span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">₱{computedTotal}</span>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Customer Name <span className="normal-case text-slate-400">(optional)</span></label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                    <input type="text" value={fCustomer} onChange={(e) => setFCustomer(e.target.value)} placeholder="Juan Dela Cruz" className="input-soft pl-10" />
                   </div>
+                </div>
 
-                  {/* Ink cost estimate */}
-                  {(inkCost > 0 || paperCost > 0) && (
-                    <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
-                      <span className="flex items-center gap-1"><Droplets className="w-3 h-3" /> Est. cost: ink ₱{inkCost.toFixed(2)} + paper ₱{paperCost.toFixed(2)}</span>
-                      <span className="font-medium">₱{(inkCost + paperCost).toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  {/* Editable final */}
+                {/* Type of Print + Paper */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Final Price (editable)</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 z-10">₱</span>
-                      <input type="number" min="0" step="0.5" value={fFinal} onChange={(e) => setFFinal(parseFloat(e.target.value) || 0)} className="input-soft pl-8 text-lg font-bold text-center" />
-                    </div>
+                    <label htmlFor="type-of-print" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                      Print Type
+                    </label>
+                    <Dropdown
+                      id="type-of-print"
+                      value={fType}
+                      onChange={(v) => setFType(v as PrintType)}
+                      options={[
+                        { value: 'print', label: 'Print' },
+                        { value: 'photocopy', label: 'Photocopy' },
+                      ]}
+                    />
                   </div>
-
-                  {adjustment !== 0 && (
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${adjustment < 0 ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-400'}`}>
-                      {adjustment < 0 ? <><ArrowDown className="w-3.5 h-3.5" /> Discount: -₱{Math.abs(adjustment)}</> : <><ArrowUp className="w-3.5 h-3.5" /> Additional: +₱{adjustment}</>}
-                    </div>
-                  )}
+                  <div>
+                    <label htmlFor="type-of-paper" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                      Paper
+                    </label>
+                    <Dropdown
+                      id="type-of-paper"
+                      value={fPaper}
+                      onChange={(v) => setFPaper(v as PaperSize)}
+                      options={PAPER_TYPES.filter((p) => validPapers.includes(p.value)).map((p) => ({
+                        value: p.value,
+                        label: p.label,
+                      }))}
+                    />
+                  </div>
                 </div>
+
+                {/* Colored + Copies */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between px-3.5 py-3.5 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/10">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Colored</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={fColored} onChange={(e) => setFColored(e.target.checked)} className="sr-only peer" />
+                      <div className="w-10 h-5 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-primary-500 peer-checked:to-accent-500" />
+                    </label>
+                  </div>
+                  <div>
+                    <input aria-label="Copies" type="number" min="1" value={fCopies} onChange={(e) => setFCopies(Math.max(1, parseInt(e.target.value) || 1))} className="input-soft text-center text-lg font-bold" placeholder="Copies" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Section: Timestamp ── */}
+              <div className="modal-section">
+                <p className="modal-section-title">Timestamp</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Date</label>
+                    <DatePicker value={fDate} onChange={setFDate} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Time</label>
+                    <TimePicker value={fTime} onChange={setFTime} />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
+                  <input type="text" value={fNotes} onChange={(e) => setFNotes(e.target.value)} placeholder="Special instructions..." className="input-soft" />
+                </div>
+              </div>
+
+              {/* ── Section: Pricing ── */}
+              <div className="modal-section space-y-2.5">
+                <p className="modal-section-title !mb-1">Pricing</p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">{fCopies} × ₱{pricePerCopy} <span className="text-[10px]">({fColored ? 'color' : 'b&w'})</span></span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">₱{computedTotal}</span>
+                </div>
+
+                {/* Ink cost estimate */}
+                {(inkCost > 0 || paperCost > 0) && (
+                  <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+                    <span className="flex items-center gap-1"><Droplets className="w-3 h-3" /> Est. cost: ink ₱{inkCost.toFixed(2)} + paper ₱{paperCost.toFixed(2)}</span>
+                    <span className="font-medium">₱{(inkCost + paperCost).toFixed(2)}</span>
+                  </div>
+                )}
+
+                {/* Editable final */}
+                <div>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Final Price (editable)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 z-10">₱</span>
+                    <input type="number" min="0" step="0.5" value={fFinal} onChange={(e) => setFFinal(parseFloat(e.target.value) || 0)} className="input-soft pl-8 text-lg font-bold text-center" />
+                  </div>
+                </div>
+
+                {adjustment !== 0 && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${adjustment < 0 ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-400'}`}>
+                    {adjustment < 0 ? <><ArrowDown className="w-3.5 h-3.5" /> Discount: -₱{Math.abs(adjustment)}</> : <><ArrowUp className="w-3.5 h-3.5" /> Additional: +₱{adjustment}</>}
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

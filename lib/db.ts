@@ -21,11 +21,24 @@ export interface BusinessSettings {
   cost_per_sheet: number;
 }
 
+export type PaperType =
+  | 'short'
+  | 'a4'
+  | 'long'
+  | 'photopaper'
+  | 'bond'
+  | 'glossy_photo'
+  | 'matte_photo'
+  | 'cardstock'
+  | 'sticker'
+  | 'kraft'
+  | 'vellum';
+
 export interface TransactionRecord {
   id?: string;
   owner_id: string;
   customer_name?: string;
-  paper_size: 'short' | 'a4' | 'long' | 'photopaper';
+  paper_size: PaperType;
   print_type: 'print' | 'photocopy';
   is_colored: boolean;
   quantity: number;
@@ -84,11 +97,41 @@ export const PRINTER_PRESETS: Record<string, { label: string; bw_yield: number; 
   custom: { label: 'Custom', bw_yield: 0, color_yield: 0 },
 };
 
+// --- Paper Types ---
+// Comprehensive set of paper stocks. `size` papers are the standard cut sizes;
+// `specialty` papers are premium stocks that are print-only (not for photocopy).
+export const PAPER_TYPES: { value: PaperType; label: string; specialty: boolean }[] = [
+  { value: 'short', label: 'Short (Letter)', specialty: false },
+  { value: 'a4', label: 'A4', specialty: false },
+  { value: 'long', label: 'Long (Legal)', specialty: false },
+  { value: 'bond', label: 'Bond Paper', specialty: false },
+  { value: 'photopaper', label: 'Photo Paper', specialty: true },
+  { value: 'glossy_photo', label: 'Glossy Photo Paper', specialty: true },
+  { value: 'matte_photo', label: 'Matte Photo Paper', specialty: true },
+  { value: 'cardstock', label: 'Cardstock', specialty: true },
+  { value: 'sticker', label: 'Sticker Paper', specialty: true },
+  { value: 'kraft', label: 'Kraft Paper', specialty: true },
+  { value: 'vellum', label: 'Vellum', specialty: true },
+];
+
+export const PAPER_TYPE_LABELS: Record<PaperType, string> = PAPER_TYPES.reduce(
+  (acc, p) => { acc[p.value] = p.label; return acc; },
+  {} as Record<PaperType, string>
+);
+
 // --- Pricing Defaults ---
-// B&W: short=3, a4/long=4 | Colored: short=5, a4/long=6 | Photopaper colored whole page=40
+// B&W: standard sizes 3-4 | Colored: standard sizes 5-6 | specialty stocks priced per sheet.
 export const PRICING = {
-  bw: { short: 3, a4: 4, long: 4, photopaper: 15 },
-  colored: { short: 5, a4: 6, long: 6, photopaper: 40 },
+  bw: {
+    short: 3, a4: 4, long: 4, bond: 3,
+    photopaper: 15, glossy_photo: 18, matte_photo: 18,
+    cardstock: 10, sticker: 12, kraft: 8, vellum: 12,
+  },
+  colored: {
+    short: 5, a4: 6, long: 6, bond: 5,
+    photopaper: 40, glossy_photo: 45, matte_photo: 45,
+    cardstock: 25, sticker: 30, kraft: 20, vellum: 28,
+  },
 } as const;
 
 export function getDefaultPrice(paperSize: string, isColored: boolean): number {

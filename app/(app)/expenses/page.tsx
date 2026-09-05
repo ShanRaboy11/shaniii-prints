@@ -334,17 +334,17 @@ export default function ExpensesPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
-              {/* Entry type toggle */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Entry Type</label>
+              {/* ── Section: Entry Type ── */}
+              <div className="modal-section">
+                <p className="modal-section-title">Entry Type</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setFEntryType('expense')}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border text-sm font-medium transition-all ${
                       fEntryType === 'expense'
-                        ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300'
-                        : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                        ? 'border-rose-400/70 bg-rose-50/80 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/15'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     <TrendingDown className="w-4 h-4" /> Expense
@@ -352,10 +352,10 @@ export default function ExpensesPage() {
                   <button
                     type="button"
                     onClick={() => setFEntryType('capital')}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border text-sm font-medium transition-all ${
                       fEntryType === 'capital'
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300'
-                        : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                        ? 'border-primary-400/70 bg-primary-50/80 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 ring-2 ring-primary-500/15'
+                        : 'border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     <PiggyBank className="w-4 h-4" /> Capital
@@ -363,58 +363,64 @@ export default function ExpensesPage() {
                 </div>
               </div>
 
-              {/* Item name */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Item Name</label>
-                <input
-                  type="text"
-                  value={fItem}
-                  onChange={(e) => setFItem(e.target.value)}
-                  placeholder={fEntryType === 'capital' ? 'e.g. Epson L3210 Printer' : 'e.g. Black Ink Bottle'}
-                  className="input"
-                />
-              </div>
+              {/* ── Section: Details ── */}
+              <div className="modal-section space-y-4">
+                <p className="modal-section-title">Details</p>
 
-              {/* Category */}
-              <div>
-                <label htmlFor="expense-category" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
-                <Dropdown
-                  id="expense-category"
-                  value={fCategory}
-                  onChange={setFCategory}
-                  options={categoryOptions}
-                />
-              </div>
-
-              {/* Qty + Unit price */}
-              <div className="grid grid-cols-2 gap-3">
+                {/* Item name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Quantity</label>
-                  <input type="number" min="1" value={fQuantity} onChange={(e) => setFQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="input text-center font-bold" />
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Item Name</label>
+                  <input
+                    type="text"
+                    value={fItem}
+                    onChange={(e) => setFItem(e.target.value)}
+                    placeholder={fEntryType === 'capital' ? 'e.g. Epson L3210 Printer' : 'e.g. Black Ink Bottle'}
+                    className="input-soft"
+                  />
                 </div>
+
+                {/* Category */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Unit Price</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₱</span>
-                    <input type="number" min="0" step="0.5" value={fUnitPrice} onChange={(e) => setFUnitPrice(parseFloat(e.target.value) || 0)} className="input pl-8 font-bold" />
+                  <label htmlFor="expense-category" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+                  <Dropdown
+                    id="expense-category"
+                    value={fCategory}
+                    onChange={setFCategory}
+                    options={categoryOptions}
+                  />
+                </div>
+
+                {/* Qty + Unit price */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Quantity</label>
+                    <input type="number" min="1" value={fQuantity} onChange={(e) => setFQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="input-soft text-center font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Unit Price</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 z-10">₱</span>
+                      <input type="number" min="0" step="0.5" value={fUnitPrice} onChange={(e) => setFUnitPrice(parseFloat(e.target.value) || 0)} className="input-soft pl-8 font-bold" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Date */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Date</label>
-                <input type="date" value={fDate} onChange={(e) => setFDate(e.target.value)} className="input" />
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
-                <input type="text" value={fNotes} onChange={(e) => setFNotes(e.target.value)} placeholder="Optional details..." className="input" />
+              {/* ── Section: Timestamp ── */}
+              <div className="modal-section space-y-4">
+                <p className="modal-section-title">Timestamp</p>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Date</label>
+                  <DatePicker value={fDate} onChange={setFDate} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
+                  <input type="text" value={fNotes} onChange={(e) => setFNotes(e.target.value)} placeholder="Optional details..." className="input-soft" />
+                </div>
               </div>
 
               {/* Total preview */}
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/10">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-primary-500/10 to-accent-500/10 border border-primary-400/25 dark:border-primary-400/20">
                 <span className="text-sm text-slate-500 dark:text-slate-400">{fQuantity} × ₱{fUnitPrice.toLocaleString()}</span>
                 <span className="text-lg font-extrabold text-slate-900 dark:text-white">₱{totalCost.toLocaleString()}</span>
               </div>

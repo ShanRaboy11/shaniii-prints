@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Clock } from 'lucide-react';
 
 interface TimePickerProps {
@@ -28,12 +28,100 @@ function toHM(hour12: number, minute: number, period: 'AM' | 'PM'): string {
 }
 
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1..12
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0,5,...,55
+const MINUTES = Array.from({ length: 60 }, (_, i) => i); // 0..59
+const PERIODS: ('AM' | 'PM')[] = ['AM', 'PM'];
+
+const ITEM_H = 40; // px height of each wheel row (must match markup)
+
+/**
+ * WheelColumn
+ * A single vertical tumbler. Uses native scroll + scroll-snap for smooth,
+ * swipeable selection; the row nearest the vertical center is the selection.
+ * Padding spacers above/below let the first and last items reach the center.
+ */
+function WheelColumn<T extends string | number>({
+  items,
+  selected,
+  onSelect,
+  format = (v) => String(v),
+  ariaLabel,
+}: {
+  items: T[];
+  selected: T;
+  onSelect: (v: T) => void;
+  format?: (v: T) => string;
+  ariaLabel: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProgrammatic = useRef(false);
+
+  const indexOfSelected = Math.max(0, items.findIndex((i) => i === selected));
+
+  // Center the selected item when it changes from outside (e.g. value prop).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    isProgrammatic.current = true;
+    el.scrollTop = indexOfSelected * ITEM_H;
+    const clear = setTimeout(() => { isProgrammatic.current = false; }, 60);
+    return () => clearTimeout(clear);
+  }, [indexOfSelected]);
+
+  const handleScroll = useCallback(() => {
+    const el = ref.current;
+    if (!el || isProgrammatic.current) return;
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    // Debounce: once scrolling settles, snap selection to nearest row.
+    settleTimer.current = setTimeout(() => {
+      const idx = Math.round(el.scrollTop / ITEM_H);
+      const clamped = Math.min(items.length - 1, Math.max(0, idx));
+      const next = items[clamped];
+      if (next !== selected) onSelect(next);
+    }, 90);
+  }, [items, onSelect, selected]);
+
+  return (
+    <div
+      ref={ref}
+      onScroll={handleScroll}
+      role="listbox"
+      aria-label={ariaLabel}
+      className="wheel-column relative h-[200px] w-full overflow-y-auto snap-y snap-mandatory scrollbar-none"
+    >
+      {/* top spacer (2 rows) so first item can center */}
+      <div style={{ height: ITEM_H * 2 }} aria-hidden />
+      {items.map((item) => {
+        const isActive = item === selected;
+        return (
+          <button
+            key={String(item)}
+            type="button"
+            role="option"
+            aria-selected={isActive}
+            onClick={() => onSelect(item)}
+            style={{ height: ITEM_H }}
+            className={`snap-center w-full flex items-center justify-center text-base tabular-nums transition-all duration-150 ${
+              isActive
+                ? 'font-extrabold text-primary-600 dark:text-primary-300 scale-110'
+                : 'font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            {format(item)}
+          </button>
+        );
+      })}
+      {/* bottom spacer (2 rows) so last item can center */}
+      <div style={{ height: ITEM_H * 2 }} aria-hidden />
+    </div>
+  );
+}
 
 /**
  * TimePicker
- * A fully-rounded custom time popover that replaces the native
- * <input type="time">. Emits a 24-hour HH:MM string via onChange, matching
+ * An alarm-style tumbler/wheel time popover that replaces the native
+ * <input type="time">. Users scroll or swipe vertical wheels for Hours,
+ * Minutes, and AM/PM. Emits a 24-hour HH:MM string via onChange, matching
  * the native control so date/time assembly logic stays unchanged.
  */
 export function TimePicker({ value, onChange, id, className = '' }: TimePickerProps) {
@@ -61,16 +149,6 @@ export function TimePicker({ value, onChange, id, className = '' }: TimePickerPr
     };
   }, []);
 
-  function setHour(h12: number) {
-    onChange(toHM(h12, minute, period));
-  }
-  function setMinute(m: number) {
-    onChange(toHM(hour12, m, period));
-  }
-  function setPeriod(p: 'AM' | 'PM') {
-    onChange(toHM(hour12, minute, p));
-  }
-
   const label = parsed
     ? `${hour12}:${String(minute).padStart(2, '0')} ${period}`
     : 'Select time';
@@ -93,59 +171,45 @@ export function TimePicker({ value, onChange, id, className = '' }: TimePickerPr
 
       {open && (
         <div className="dropdown-panel !p-3 w-64" role="dialog">
-          {/* AM / PM toggle */}
-          <div className="grid grid-cols-2 gap-1.5 mb-3 p-1 rounded-2xl bg-slate-100/80 dark:bg-white/5">
-            {(['AM', 'PM'] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPeriod(p)}
-                className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  period === p
-                    ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-300'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+          <div className="relative">
+            {/* Center selection band — the "now selecting" highlight */}
+            <div
+              className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 h-10 rounded-2xl bg-gradient-to-r from-primary-500/10 to-accent-500/10 border border-primary-400/30 dark:border-primary-400/25"
+              aria-hidden
+            />
+            {/* Fade masks top/bottom for the tumbler depth effect */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/95 dark:from-slate-900/95 to-transparent z-10 rounded-t-xl" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/95 dark:from-slate-900/95 to-transparent z-10 rounded-b-xl" aria-hidden />
+
+            <div className="grid grid-cols-3 gap-1">
+              <WheelColumn
+                ariaLabel="Hour"
+                items={HOURS_12}
+                selected={hour12}
+                onSelect={(h) => onChange(toHM(h, minute, period))}
+              />
+              <WheelColumn
+                ariaLabel="Minute"
+                items={MINUTES}
+                selected={minute}
+                onSelect={(m) => onChange(toHM(hour12, m, period))}
+                format={(m) => String(m).padStart(2, '0')}
+              />
+              <WheelColumn
+                ariaLabel="AM or PM"
+                items={PERIODS}
+                selected={period}
+                onSelect={(p) => onChange(toHM(hour12, minute, p))}
+              />
+            </div>
           </div>
 
-          {/* Hours */}
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-1">Hour</p>
-          <div className="grid grid-cols-6 gap-1 mb-3">
-            {HOURS_12.map((h) => (
-              <button
-                key={h}
-                type="button"
-                onClick={() => setHour(h)}
-                className={`h-8 rounded-full text-sm font-medium transition-all ${
-                  h === hour12
-                    ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md shadow-primary-500/30'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-700 dark:hover:text-primary-300'
-                }`}
-              >
-                {h}
-              </button>
-            ))}
-          </div>
-
-          {/* Minutes */}
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-1">Minute</p>
-          <div className="grid grid-cols-6 gap-1">
-            {MINUTES.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMinute(m)}
-                className={`h-8 rounded-full text-sm font-medium transition-all ${
-                  m === minute
-                    ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md shadow-primary-500/30'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-700 dark:hover:text-primary-300'
-                }`}
-              >
-                {String(m).padStart(2, '0')}
-              </button>
+          {/* Column captions */}
+          <div className="grid grid-cols-3 gap-1 mt-2 pt-2 border-t border-slate-100 dark:border-white/5">
+            {['Hour', 'Min', 'AM/PM'].map((c) => (
+              <span key={c} className="text-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                {c}
+              </span>
             ))}
           </div>
         </div>

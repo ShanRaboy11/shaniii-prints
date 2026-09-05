@@ -43,13 +43,13 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14] relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#05070e] relative overflow-hidden">
       {/* Animated grid of pulsing dots */}
       <AnimatedDotGrid />
 
       {/* Ambient glows on top of the grid for extra depth */}
-      <div className="absolute top-10 right-1/3 w-96 h-96 rounded-full bg-primary-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 left-1/4 w-80 h-80 rounded-full bg-accent-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute top-10 right-1/3 w-96 h-96 rounded-full bg-primary-500/15 dark:bg-primary-500/20 blur-3xl pointer-events-none animate-float" />
+      <div className="absolute bottom-10 left-1/4 w-80 h-80 rounded-full bg-accent-500/15 dark:bg-accent-500/20 blur-3xl pointer-events-none animate-float" style={{ animationDelay: '1.5s' }} />
 
       <div className="relative flex-1 flex items-center justify-center px-4 pt-28 pb-12">
         <div className="w-full max-w-md">

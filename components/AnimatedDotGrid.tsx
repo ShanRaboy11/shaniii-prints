@@ -11,8 +11,10 @@ import { useTheme } from 'next-themes';
  *  - Interaction: the cursor creates a circular repulsion zone — dots within
  *    the radius are pushed radially outward from the pointer (magnetic repel),
  *    easing smoothly back to their home position when the cursor leaves.
+ *  - Hover glow: dots inside the cursor radius brighten and grow; in dark mode
+ *    they radiate a bright neon halo for a vivid interactive effect.
  *
- * This is the ONLY background visual on the login page — no extra layers.
+ * Used as the background matrix on the landing, login, and signup pages.
  */
 export function AnimatedDotGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -24,10 +26,11 @@ export function AnimatedDotGrid() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const SPACING = 34;        // distance between dots
-    const BASE_RADIUS = 1.6;   // dot radius at rest
-    const REPEL_RADIUS = 130;  // cursor influence radius
-    const REPEL_STRENGTH = 26; // max push distance in px
+    const SPACING = 46;        // distance between dots (open, balanced spacing)
+    const BASE_RADIUS = 1.9;   // dot radius at rest (crisp, prominent)
+    const REPEL_RADIUS = 170;  // cursor influence radius
+    const REPEL_STRENGTH = 34; // max push distance in px
+    const GLOW_RADIUS = 190;   // cursor glow influence radius
 
     let width = 0;
     let height = 0;
@@ -81,10 +84,10 @@ export function AnimatedDotGrid() {
       const green = dark ? '74, 222, 128' : '34, 197, 94';
 
       // Uniform pulse: shared sine so all dots breathe together.
-      // Kept slow + low-amplitude so the effect is calm and understated.
       const pulse = (Math.sin(t * 1.1) + 1) / 2; // 0..1, gentle cadence
-      const radius = BASE_RADIUS + pulse * 0.35;
-      const baseAlpha = 0.14 + pulse * 0.12; // soft, low-opacity dots
+      const radius = BASE_RADIUS + pulse * 0.4;
+      // Crisper, more prominent resting dots (higher base opacity than before).
+      const baseAlpha = dark ? 0.22 + pulse * 0.14 : 0.20 + pulse * 0.12;
 
       for (let i = 0; i < dots.length; i++) {
         const d = dots[i];
@@ -108,25 +111,39 @@ export function AnimatedDotGrid() {
         d.x += (tx - d.x) * 0.16;
         d.y += (ty - d.y) * 0.16;
 
-        // Dots near the cursor glow a touch brighter/larger (kept subtle)
+        // Alternate blue / green in a checker so the matrix reads as two-tone
+        const col = (i % 2 === 0) ? blue : green;
+
+        // Interactive hover glow: dots within the cursor radius light up and,
+        // in dark mode, radiate a bright neon halo (shadowBlur) alongside the
+        // magnetic repulsion/expansion above.
         let alpha = baseAlpha;
         let rad = radius;
+        let glow = 0;
         if (pointer.active) {
           const pd = Math.hypot(d.hx - pointer.x, d.hy - pointer.y);
-          if (pd < REPEL_RADIUS) {
-            const f = 1 - pd / REPEL_RADIUS;
-            alpha = Math.min(0.75, baseAlpha + f * 0.35);
-            rad = radius + f * 0.9;
+          if (pd < GLOW_RADIUS) {
+            const f = 1 - pd / GLOW_RADIUS; // 1 at cursor → 0 at edge
+            const ease = f * f;
+            alpha = Math.min(1, baseAlpha + ease * (dark ? 0.78 : 0.6));
+            rad = radius + ease * (dark ? 2.4 : 1.6);
+            glow = ease;
           }
         }
 
-        // Alternate blue / green in a checker so the matrix reads as two-tone
-        const col = (i % 2 === 0) ? blue : green;
         ctx!.beginPath();
         ctx!.arc(d.x, d.y, rad, 0, Math.PI * 2);
         ctx!.fillStyle = `rgba(${col}, ${alpha})`;
+        if (glow > 0.02 && dark) {
+          // Bright neon halo around dots near the cursor (dark mode only).
+          ctx!.shadowBlur = 14 * glow;
+          ctx!.shadowColor = `rgba(${col}, ${0.9 * glow})`;
+        } else {
+          ctx!.shadowBlur = 0;
+        }
         ctx!.fill();
       }
+      ctx!.shadowBlur = 0;
 
       raf = requestAnimationFrame(frame);
     }
@@ -162,8 +179,9 @@ export function AnimatedDotGrid() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      {/* Soft radial vignette so the matrix recedes toward the edges */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(244,248,251,0.82)_80%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,11,20,0.88)_80%)]" />
+      {/* Soft radial vignette so the matrix recedes toward the edges.
+          Lighter than before so the denser/brighter grid stays prominent. */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(244,248,251,0.70)_88%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(5,7,14,0.78)_90%)]" />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Printer, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
@@ -8,22 +8,53 @@ import { signIn } from '@/lib/auth';
 import { useToast } from '@/components/ToastProvider';
 import { AnimatedDotGrid } from '@/components/AnimatedDotGrid';
 import { Footer } from '@/components/Footer';
-import { Header } from '@/components/Header';
-import { AuthProvider } from '@/components/AuthProvider';
+import { MarketingHeader } from '@/components/MarketingHeader';
 
-function LoginContent() {
+// localStorage key for the "Remember me" email preference.
+const REMEMBER_KEY = 'shanii:rememberedEmail';
+
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
+
+  // On mount, restore the remembered email (if any) and reflect it in the
+  // checkbox state so returning users land pre-filled.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REMEMBER_KEY);
+      if (saved) {
+        setEmail(saved);
+        setRememberMe(true);
+      } else {
+        setRememberMe(false);
+      }
+    } catch {
+      /* localStorage unavailable (SSR/private mode) — ignore */
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password) {
       showToast('Please fill in all fields', 'error');
       return;
+    }
+
+    // Persist or clear the remembered email before attempting sign-in so the
+    // preference survives the redirect on success.
+    try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, email);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
+    } catch {
+      /* ignore storage errors */
     }
 
     setLoading(true);
@@ -43,8 +74,8 @@ function LoginContent() {
       {/* Interactive dot-matrix background — the only background visual here */}
       <AnimatedDotGrid />
 
-      {/* Unauthenticated global header */}
-      <Header />
+      {/* Shared marketing header — identical to the landing page */}
+      <MarketingHeader />
 
       {/* First fold: exactly one viewport tall — header + centered card only.
           The footer is pushed strictly below the fold. */}
@@ -116,6 +147,37 @@ function LoginContent() {
                 </div>
               </div>
 
+              {/* Remember me + Forgot password */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none group/remember">
+                  <span className="relative inline-flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <span className="w-4 h-4 rounded-md border border-slate-300 dark:border-white/20 bg-white/70 dark:bg-white/5 peer-checked:bg-gradient-to-br peer-checked:from-primary-500 peer-checked:to-accent-500 peer-checked:border-transparent transition-all" />
+                    <svg
+                      className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300 group-hover/remember:text-slate-800 dark:group-hover/remember:text-white transition-colors">
+                    Remember me
+                  </span>
+                </label>
+
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
               {/* Submit */}
               <button
                 type="submit"
@@ -156,14 +218,5 @@ function LoginContent() {
 
       <Footer />
     </div>
-  );
-}
-
-export default function LoginPage() {
-  // Wrap in AuthProvider so the (unauthenticated) global Header renders correctly.
-  return (
-    <AuthProvider>
-      <LoginContent />
-    </AuthProvider>
   );
 }

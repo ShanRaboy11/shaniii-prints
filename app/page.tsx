@@ -15,42 +15,30 @@ import {
 } from 'lucide-react';
 import { Reveal } from '@/components/Reveal';
 import { Footer } from '@/components/Footer';
+import { MarketingHeader } from '@/components/MarketingHeader';
+import { AnimatedDotGrid } from '@/components/AnimatedDotGrid';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14] overflow-hidden">
-      {/* ========== NAVBAR (glassmorphism, text-only links) ========== */}
-      <nav className="fixed top-6 inset-x-0 z-50 flex justify-center px-4">
-        <div className="w-full max-w-6xl">
-          <div className="header-glass flex items-center justify-between rounded-full px-4 sm:px-6 py-3">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-accent-400 flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform duration-300">
-                <span className="text-white text-sm font-black tracking-tight">S</span>
-              </div>
-              <span className="text-base font-bold tracking-tight dark:text-white">
-                Shanii<span className="text-primary-500">Prints</span>
-              </span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="hidden sm:inline-flex text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/signup"
-                className="btn-primary-gradient !rounded-full !py-2 !px-5 !text-xs"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#05070e] overflow-hidden">
+      {/* Interactive dot-matrix background — fixed behind the whole page */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        {/* Extra animated gradient blobs + floating decorative rings for depth */}
+        <div className="absolute -top-24 -left-24 w-[30rem] h-[30rem] rounded-full bg-primary-500/10 dark:bg-primary-500/25 blur-3xl animate-float" />
+        <div className="absolute top-1/3 -right-28 w-[34rem] h-[34rem] rounded-full bg-accent-500/10 dark:bg-accent-500/22 blur-3xl" style={{ animation: 'floatX 13s ease-in-out infinite' }} />
+        <div className="absolute -bottom-32 left-1/4 w-[28rem] h-[28rem] rounded-full bg-indigo-500/8 dark:bg-indigo-500/20 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div className="deco-ring w-72 h-72 top-24 right-[12%]" style={{ animation: 'spinSlow 60s linear infinite' }} />
+        <div className="deco-ring w-52 h-52 bottom-32 left-[8%]" style={{ animation: 'spinSlow 48s linear infinite reverse' }} />
+        <AnimatedDotGrid />
+      </div>
+
+      {/* ========== HEADER — shared marketing header (matches login) ========== */}
+      <div className="relative z-50">
+        <MarketingHeader />
+      </div>
 
       {/* ========== HERO — full viewport section ========== */}
-      <section id="hero" className="section-viewport relative pt-32 sm:pt-36">
+      <section id="hero" className="section-viewport relative z-10 pt-32 sm:pt-36">
         {/* Background Decorations */}
         <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full bg-primary-500/10 blur-3xl pointer-events-none animate-float" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full bg-accent-500/10 blur-3xl pointer-events-none animate-float" style={{ animationDelay: '1.5s' }} />
@@ -118,7 +106,7 @@ export default function LandingPage() {
       </section>
 
       {/* ========== FEATURES GRID — full viewport section ========== */}
-      <section id="features" className="section-viewport relative">
+      <section id="features" className="section-viewport relative z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
           <Reveal>
             <div className="text-center mb-14">
@@ -185,7 +173,7 @@ export default function LandingPage() {
       </section>
 
       {/* ========== PRICING — full viewport section ========== */}
-      <section id="pricing" className="section-viewport relative">
+      <section id="pricing" className="section-viewport relative z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-50/50 dark:via-primary-500/5 to-transparent pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 w-full">
@@ -200,7 +188,7 @@ export default function LandingPage() {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
             {/* Free Plan */}
             <Reveal delay={0}>
               <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-3xl p-8 shadow-xl h-full">
@@ -254,12 +242,52 @@ export default function LandingPage() {
                 </Link>
               </div>
             </Reveal>
+
+            {/* AI Integration Plan */}
+            <Reveal delay={240}>
+              <div className="relative rounded-3xl p-8 h-full overflow-hidden bg-gradient-to-br from-primary-600 to-accent-500 shadow-xl shadow-primary-500/25">
+                {/* Ambient glow accents */}
+                <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/20 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-10 w-52 h-52 rounded-full bg-accent-300/30 blur-3xl pointer-events-none" />
+
+                <div className="absolute top-5 right-5">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3" /> New
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <div className="mb-6">
+                    <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm mb-3">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-1">AI Integration</h3>
+                    <p className="text-sm text-white/70">Intelligent automation, built in</p>
+                  </div>
+                  <div className="mb-6">
+                    <span className="text-4xl font-extrabold text-white">₱599</span>
+                    <span className="text-sm text-white/70 ml-1">/month</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <PricingFeature text="Everything in Pro" light />
+                    <PricingFeature text="AI-powered smart pricing" light />
+                    <PricingFeature text="Demand forecasting" light />
+                    <PricingFeature text="Smart receipt insights" light />
+                    <PricingFeature text="Automated expense categorization" light />
+                    <PricingFeature text="Natural-language reports" light />
+                  </ul>
+                  <Link href="/signup" className="w-full inline-flex items-center justify-center gap-2 !rounded-full !py-3 bg-white text-primary-600 font-semibold shadow-lg hover:bg-white/90 transition-colors">
+                    Start with AI
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* ========== FINAL CTA — full viewport section ========== */}
-      <section id="cta" className="section-viewport relative">
+      <section id="cta" className="section-viewport relative z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center w-full">
           <Reveal>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
@@ -279,7 +307,9 @@ export default function LandingPage() {
       </section>
 
       {/* ========== FOOTER ========== */}
-      <Footer />
+      <div className="relative z-10">
+        <Footer />
+      </div>
     </div>
   );
 }
@@ -317,10 +347,10 @@ function FeatureCard({
   );
 }
 
-function PricingFeature({ text }: { text: string }) {
+function PricingFeature({ text, light = false }: { text: string; light?: boolean }) {
   return (
-    <li className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-      <Check className="w-4 h-4 text-accent-500 flex-shrink-0" />
+    <li className={`flex items-center gap-3 text-sm ${light ? 'text-white/90' : 'text-slate-700 dark:text-slate-300'}`}>
+      <Check className={`w-4 h-4 flex-shrink-0 ${light ? 'text-white' : 'text-accent-500'}`} />
       {text}
     </li>
   );
