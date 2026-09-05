@@ -89,10 +89,13 @@
   }
 
   /* === Inputs === */
+  /* Prominent, high-visibility outlines with explicit hover + focus states
+     so fields never bleed into the page background. */
   .input {
-    @apply w-full px-4 py-3 bg-slate-100/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 rounded-xl;
+    @apply w-full px-4 py-3 bg-white dark:bg-slate-900/60 border-2 border-slate-300 dark:border-white/15 rounded-xl;
     @apply text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500/60 focus:bg-white dark:focus:bg-slate-800;
+    @apply shadow-sm hover:border-slate-400 dark:hover:border-white/25;
+    @apply focus:outline-none focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-400 focus:bg-white dark:focus:bg-slate-800;
     @apply transition-all duration-200;
   }
 
@@ -105,6 +108,10 @@
   /* === Custom Dropdown (rounded-corner design tokens, consistent everywhere) === */
   .dropdown-trigger {
     @apply input flex items-center justify-between gap-2 cursor-pointer select-none text-left;
+  }
+
+  .dropdown-trigger[aria-expanded='true'] {
+    @apply border-primary-500 dark:border-primary-400 ring-4 ring-primary-500/20 bg-white dark:bg-slate-800;
   }
 
   .dropdown-panel {
@@ -341,6 +348,15 @@
 
   .animate-float {
     animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-menu-drop {
+    animation: menuDrop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes menuDrop {
+    from { transform: translateY(-8px) scaleY(0.96); opacity: 0; }
+    to { transform: translateY(0) scaleY(1); opacity: 1; }
   }
 
   @keyframes slideIn {

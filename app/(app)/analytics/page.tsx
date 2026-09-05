@@ -4,30 +4,30 @@ import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import ChartSetup from '@/components/charts/ChartSetup';
-import { Dropdown } from '@/components/Dropdown';
 import { ErrorState } from '@/components/ErrorState';
 import { useOwnerData } from '@/lib/useOwnerData';
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Printer,
   Tag,
   ArrowDown,
   ArrowUp,
   Calendar,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   txByType,
   txByPaper,
-  txMonthlySeries,
+  txSeries,
   txTotalRevenue,
-  txMonthlyRevenue,
   txTotalDiscounts,
   txTotalAdditionals,
   sumCapital,
   sumExpenses,
-  sumMonthlyExpenses,
+  timeframeMetrics,
+  TIMEFRAME_LABEL,
+  Timeframe,
 } from '@/lib/db';
 
 // Brand chart colors — light blue (primary) + light green (accent)
@@ -38,9 +38,15 @@ const C = {
   accentDark: '#4ade80',
 };
 
+const TIMEFRAMES: { value: Timeframe; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
+
 export default function AnalyticsPage() {
   const { transactions, expenses, loading, error, reload } = useOwnerData();
-  const [period, setPeriod] = useState<'6' | '12'>('6');
+  const [timeframe, setTimeframe] = useState<Timeframe>('monthly'); // Monthly default
   const { theme } = useTheme();
 
   if (loading) return <AnalyticsSkeleton />;
@@ -50,8 +56,11 @@ export default function AnalyticsPage() {
   const gridColor = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(148, 163, 184, 0.15)';
   const textColor = isDark ? '#64748b' : '#94a3b8';
 
-  // Calculations
-  const monthlyData = txMonthlySeries(transactions, parseInt(period));
+  // Timeframe-scoped metrics
+  const m = timeframeMetrics(transactions, expenses, timeframe);
+  const series = txSeries(transactions, timeframe);
+
+  // All-time / structural data
   const { prints, photocopies } = txByType(transactions);
   const paperData = txByPaper(transactions);
   const totalRevenue = txTotalRevenue(transactions);
@@ -59,27 +68,19 @@ export default function AnalyticsPage() {
   const totalExpenses = sumExpenses(expenses);
   const totalDiscounts = txTotalDiscounts(transactions);
   const totalAdditionals = txTotalAdditionals(transactions);
-  const now = new Date();
-  const thisMonthRev = txMonthlyRevenue(transactions, now.getFullYear(), now.getMonth());
-  const lastMonthRev = txMonthlyRevenue(
-    transactions,
-    now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(),
-    now.getMonth() === 0 ? 11 : now.getMonth() - 1
-  );
-  const monthExpenses = sumMonthlyExpenses(expenses, now.getFullYear(), now.getMonth());
-  const growth = lastMonthRev > 0 ? ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100 : thisMonthRev > 0 ? 100 : 0;
-  const totalCopies = transactions.reduce((s, t) => s + t.quantity, 0);
-  const avgOrder = transactions.length > 0 ? totalRevenue / transactions.length : 0;
   const printRevenue = prints.reduce((s, t) => s + t.final_total, 0);
   const photocopyRevenue = photocopies.reduce((s, t) => s + t.final_total, 0);
   const netProfit = totalRevenue - totalExpenses;
 
+  const tfLabel = TIMEFRAME_LABEL[timeframe];
+  const trendLabel = timeframe === 'daily' ? 'Last 14 days' : timeframe === 'weekly' ? 'Last 8 weeks' : 'Last 6 months';
+
   // Revenue chart
   const revenueChart = {
-    labels: monthlyData.map((d) => d.month),
+    labels: series.map((d) => d.label),
     datasets: [{
       label: 'Revenue',
-      data: monthlyData.map((d) => d.revenue),
+      data: series.map((d) => d.revenue),
       borderColor: isDark ? C.primaryDark : C.primary,
       backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(14, 165, 233, 0.10)',
       borderWidth: 2.5,
@@ -88,7 +89,7 @@ export default function AnalyticsPage() {
       pointBackgroundColor: isDark ? C.primaryDark : C.primary,
       pointBorderColor: isDark ? '#070b14' : '#ffffff',
       pointBorderWidth: 2,
-      pointRadius: 4,
+      pointRadius: 3,
       pointHoverRadius: 6,
     }],
   };
@@ -110,12 +111,11 @@ export default function AnalyticsPage() {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+      x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
       y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, callback: (v: any) => `₱${v}` } },
     },
   };
 
-  // Type doughnut — primary (print) vs accent (photocopy)
   const typeChart = {
     labels: ['Print', 'Photocopy'],
     datasets: [{
@@ -142,7 +142,6 @@ export default function AnalyticsPage() {
     },
   };
 
-  // Paper bar chart
   const paperChart = {
     labels: ['Short', 'A4', 'Long', 'Photo Paper'],
     datasets: [{
@@ -176,6 +175,8 @@ export default function AnalyticsPage() {
   };
 
   const hasData = transactions.length > 0;
+  // Micro-chart sparkline points for the revenue panel
+  const spark = series.map((d) => d.revenue);
 
   return (
     <div className="animate-fade-in relative">
@@ -183,48 +184,46 @@ export default function AnalyticsPage() {
       <div className="blob-1" />
       <div className="blob-2" />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      {/* Header + Timeframe segmented control */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="page-title">Analytics</h1>
           <p className="page-subtitle">Financial insights and performance metrics.</p>
         </div>
-        <Dropdown
-          className="w-44"
-          value={period}
-          onChange={(v) => setPeriod(v as '6' | '12')}
-          options={[
-            { value: '6', label: 'Last 6 Months' },
-            { value: '12', label: 'Last 12 Months' },
-          ]}
-        />
+        <Segmented value={timeframe} onChange={setTimeframe} options={TIMEFRAMES} />
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-        <MiniStat
-          icon={<DollarSign className="w-4 h-4" />}
-          color="primary"
-          label="Total Revenue"
-          value={`₱${totalRevenue.toLocaleString()}`}
+      {/* High-variance metric panels */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+        <MetricPanel
+          tone="primary"
+          icon={<DollarSign className="w-5 h-5" />}
+          label={`${tfLabel} Revenue`}
+          value={`₱${m.curRevenue.toLocaleString()}`}
+          trend={m.growth}
+          spark={spark}
         />
-        <MiniStat
-          icon={growth >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          color="accent"
-          label="Monthly Growth"
-          value={`${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`}
+        <MetricPanel
+          tone="accent"
+          icon={<TrendingUp className="w-5 h-5" />}
+          label={`${tfLabel} Net Profit`}
+          value={`₱${m.netProfit.toLocaleString()}`}
+          sub={`Expenses ₱${m.curExpenses.toLocaleString()}`}
+          positive={m.netProfit >= 0}
         />
-        <MiniStat
-          icon={<Printer className="w-4 h-4" />}
-          color="sky"
-          label="Total Copies"
-          value={totalCopies.toLocaleString()}
+        <MetricPanel
+          tone="sky"
+          icon={<ShoppingCart className="w-5 h-5" />}
+          label={`${tfLabel} Orders`}
+          value={m.orders.toLocaleString()}
+          sub={`${m.copies.toLocaleString()} copies`}
         />
-        <MiniStat
-          icon={<Tag className="w-4 h-4" />}
-          color="emerald"
+        <MetricPanel
+          tone="amber"
+          icon={<Tag className="w-5 h-5" />}
           label="Avg. per Order"
-          value={`₱${avgOrder.toFixed(0)}`}
+          value={`₱${m.avgOrder.toFixed(0)}`}
+          sub={tfLabel}
         />
       </div>
 
@@ -240,20 +239,22 @@ export default function AnalyticsPage() {
         <>
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
-            <div className="lg:col-span-3 glass-card p-5 sm:p-6">
+            <Panel className="lg:col-span-3">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Revenue Trend</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Monthly income over time</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{trendLabel}</p>
                 </div>
-                <Calendar className="w-4 h-4 text-slate-400" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-100 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300">
+                  <Calendar className="w-3 h-3" /> {tfLabel}
+                </span>
               </div>
               <div className="chart-container">
                 <Line data={revenueChart} options={revenueOpts as any} />
               </div>
-            </div>
+            </Panel>
 
-            <div className="lg:col-span-2 glass-card p-5 sm:p-6">
+            <Panel className="lg:col-span-2">
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Service Distribution</h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Print vs Photocopy</p>
@@ -271,12 +272,12 @@ export default function AnalyticsPage() {
                   <p className="text-sm font-bold text-slate-800 dark:text-white">₱{photocopyRevenue.toLocaleString()}</p>
                 </div>
               </div>
-            </div>
+            </Panel>
           </div>
 
           {/* Charts Row 2 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="glass-card p-5 sm:p-6">
+            <Panel>
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Paper Size Usage</h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Orders by paper type</p>
@@ -284,13 +285,13 @@ export default function AnalyticsPage() {
               <div className="chart-container h-[240px]">
                 <Bar data={paperChart} options={paperOpts as any} />
               </div>
-            </div>
+            </Panel>
 
             {/* Financial Breakdown */}
-            <div className="glass-card p-5 sm:p-6">
+            <Panel>
               <div className="mb-5">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Financial Breakdown</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Capital, revenue &amp; profit</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">All-time capital, revenue &amp; profit</p>
               </div>
 
               <div className="space-y-4">
@@ -327,18 +328,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Monthly Comparison */}
-          <div className="glass-card p-5 sm:p-6">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-4">Period Comparison</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <CompareCard label="This Month Rev." value={thisMonthRev} />
-              <CompareCard label="Last Month Rev." value={lastMonthRev} />
-              <CompareCard label="This Month Exp." value={monthExpenses} negative />
-              <CompareCard label="Net This Month" value={thisMonthRev - monthExpenses} highlight />
-            </div>
+            </Panel>
           </div>
         </>
       )}
@@ -346,23 +336,138 @@ export default function AnalyticsPage() {
   );
 }
 
-type MiniColor = 'primary' | 'accent' | 'sky' | 'emerald';
+/* ---------- Segmented control ---------- */
+function Segmented({ value, onChange, options }: { value: Timeframe; onChange: (v: Timeframe) => void; options: { value: Timeframe; label: string }[] }) {
+  return (
+    <div className="inline-flex p-1 rounded-2xl bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 ring-1 ring-white/40 dark:ring-white/5 shadow-sm self-start">
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={`relative px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              active
+                ? 'text-white shadow-md'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            {active && (
+              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 -z-0" />
+            )}
+            <span className="relative z-10">{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
-function MiniStat({ icon, color, label, value }: { icon: React.ReactNode; color: MiniColor; label: string; value: string }) {
-  const colors: Record<MiniColor, string> = {
-    primary: 'bg-primary-100 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400',
-    accent: 'bg-accent-100 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400',
-    sky: 'bg-sky-100 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400',
-    emerald: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+/* ---------- High-variance metric panel ---------- */
+type Tone = 'primary' | 'accent' | 'sky' | 'amber';
+
+function MetricPanel({
+  tone, icon, label, value, sub, trend, positive, spark,
+}: {
+  tone: Tone;
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  trend?: number;
+  positive?: boolean;
+  spark?: number[];
+}) {
+  const tones: Record<Tone, { grad: string; ring: string; iconBg: string; glow: string }> = {
+    primary: {
+      grad: 'from-primary-500/15 to-transparent',
+      ring: 'ring-primary-300/40 dark:ring-primary-400/20',
+      iconBg: 'bg-primary-100 dark:bg-primary-500/20 text-primary-600 dark:text-primary-300',
+      glow: 'bg-primary-400/20',
+    },
+    accent: {
+      grad: 'from-accent-500/15 to-transparent',
+      ring: 'ring-accent-300/40 dark:ring-accent-400/20',
+      iconBg: 'bg-accent-100 dark:bg-accent-500/20 text-accent-600 dark:text-accent-300',
+      glow: 'bg-accent-400/20',
+    },
+    sky: {
+      grad: 'from-sky-500/15 to-transparent',
+      ring: 'ring-sky-300/40 dark:ring-sky-400/20',
+      iconBg: 'bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300',
+      glow: 'bg-sky-400/20',
+    },
+    amber: {
+      grad: 'from-amber-500/15 to-transparent',
+      ring: 'ring-amber-300/40 dark:ring-amber-400/20',
+      iconBg: 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300',
+      glow: 'bg-amber-400/20',
+    },
   };
+  const t = tones[tone];
 
   return (
-    <div className="stat-card flex-col gap-3">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${colors[color]}`}>{icon}</div>
-      <div>
-        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{label}</p>
-        <p className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">{value}</p>
+    <div className={`relative overflow-hidden rounded-2xl p-5 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 ring-1 ${t.ring} shadow-[0_8px_30px_rgba(2,132,199,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:-translate-y-1 transition-all duration-300`}>
+      {/* tinted gradient wash */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${t.grad} pointer-events-none`} />
+      {/* muted glow blob */}
+      <div className={`absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl ${t.glow} pointer-events-none`} />
+
+      <div className="relative">
+        <div className="flex items-start justify-between">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.iconBg}`}>{icon}</div>
+          {typeof trend === 'number' && (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              trend >= 0
+                ? 'bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300'
+                : 'bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300'
+            }`}>
+              {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
+            </span>
+          )}
+        </div>
+
+        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-4">{label}</p>
+        <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 ${
+          positive === false ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+        }`}>{value}</p>
+        {sub && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
+
+        {spark && spark.length > 1 && <Sparkline data={spark} tone={tone} />}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Inline SVG micro-chart ---------- */
+function Sparkline({ data, tone }: { data: number[]; tone: Tone }) {
+  const w = 120;
+  const h = 26;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
+  const step = w / (data.length - 1);
+  const pts = data.map((v, i) => `${i * step},${h - ((v - min) / range) * h}`).join(' ');
+  const strokes: Record<Tone, string> = {
+    primary: 'stroke-primary-500',
+    accent: 'stroke-accent-500',
+    sky: 'stroke-sky-500',
+    amber: 'stroke-amber-500',
+  };
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-6 mt-3" preserveAspectRatio="none">
+      <polyline points={pts} fill="none" className={strokes[tone]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ---------- Reusable elevated glass panel ---------- */
+function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-6 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 ring-1 ring-white/40 dark:ring-white/5 shadow-[0_8px_30px_rgba(2,132,199,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] ${className}`}>
+      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/10 to-transparent" />
+      {children}
     </div>
   );
 }
@@ -390,30 +495,13 @@ function ProgressRow({ label, value, max, color }: { label: string; value: numbe
   );
 }
 
-function CompareCard({ label, value, negative, highlight }: { label: string; value: number; negative?: boolean; highlight?: boolean }) {
-  return (
-    <div className="p-4 rounded-xl bg-slate-50/80 dark:bg-white/5">
-      <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1">{label}</p>
-      <p className={`text-base font-bold ${
-        highlight
-          ? value >= 0 ? 'text-accent-600 dark:text-accent-400' : 'text-rose-500 dark:text-rose-400'
-          : negative
-            ? 'text-rose-500 dark:text-rose-400'
-            : 'text-slate-900 dark:text-white'
-      }`}>
-        {negative ? '-' : ''}₱{Math.abs(value).toLocaleString()}
-      </p>
-    </div>
-  );
-}
-
 function AnalyticsSkeleton() {
   return (
     <div className="animate-pulse">
       <div className="h-8 w-36 bg-slate-200 dark:bg-slate-800 rounded mb-2" />
       <div className="h-4 w-56 bg-slate-200 dark:bg-slate-800 rounded mb-8" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-slate-200 dark:bg-slate-800 rounded-2xl" />)}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-36 bg-slate-200 dark:bg-slate-800 rounded-2xl" />)}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
         <div className="lg:col-span-3 h-72 bg-slate-200 dark:bg-slate-800 rounded-2xl" />

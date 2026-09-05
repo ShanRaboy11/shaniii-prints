@@ -38,12 +38,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14] relative overflow-hidden">
-      {/* Animated grid of pulsing dots */}
+      {/* Interactive dot-matrix background — the only background visual here */}
       <AnimatedDotGrid />
-
-      {/* Ambient glows on top of the grid for extra depth */}
-      <div className="absolute top-20 left-1/3 w-96 h-96 rounded-full bg-primary-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-20 right-1/4 w-80 h-80 rounded-full bg-accent-500/10 blur-3xl pointer-events-none" />
 
       <div className="relative flex-1 flex items-center justify-center px-4 pt-28 pb-12">
         <div className="w-full max-w-md">
