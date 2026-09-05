@@ -320,8 +320,8 @@ export default function AnalyticsPage() {
 
 function MiniStat({ icon, color, label, value }: { icon: React.ReactNode; color: string; label: string; value: string }) {
   const colors: Record<string, string> = {
-    indigo: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400',
-    cyan: 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400',
+    indigo: 'bg-primary-100 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400',
+    cyan: 'bg-accent-100 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400',
     violet: 'bg-violet-100 dark:bg-violet-500/15 text-violet-600 dark:text-violet-400',
     amber: 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400',
   };

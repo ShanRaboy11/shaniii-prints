@@ -64,7 +64,7 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-4 h-4 text-indigo-400" />
+          <Sparkles className="w-4 h-4 text-primary-400" />
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </span>
@@ -90,14 +90,14 @@ export default function DashboardPage() {
           {/* Quick Action */}
           <Link href="/transactions" className="block glass-card p-5 group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 group-hover:scale-105 transition-all duration-300">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 group-hover:scale-105 transition-all duration-300">
                 <Plus className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">New Order</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Record a print or photocopy</p>
               </div>
-              <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-primary-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </div>
           </Link>
 
@@ -105,8 +105,8 @@ export default function DashboardPage() {
           <div className="glass-card p-5">
             <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Today&apos;s Activity</h3>
             <div className="space-y-3">
-              <ActivityRow icon={<Printer className="w-4 h-4" />} bg="bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" label="Prints" value={todayPrints} />
-              <ActivityRow icon={<Copy className="w-4 h-4" />} bg="bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400" label="Photocopies" value={todayPhotocopies} />
+              <ActivityRow icon={<Printer className="w-4 h-4" />} bg="bg-primary-100 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400" label="Prints" value={todayPrints} />
+              <ActivityRow icon={<Copy className="w-4 h-4" />} bg="bg-accent-100 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400" label="Photocopies" value={todayPhotocopies} />
               <div className="pt-3 border-t border-slate-100/60 dark:border-white/5 flex justify-between text-sm">
                 <span className="text-slate-500 dark:text-slate-400">Total copies</span>
                 <span className="font-bold text-slate-800 dark:text-white">{todayCopies}</span>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-3 glass-card p-5 sm:p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Orders</h3>
-            <Link href="/transactions" className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+            <Link href="/transactions" className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
               View All &rarr;
             </Link>
           </div>
@@ -168,8 +168,8 @@ export default function DashboardPage() {
 
 function StatCard({ label, value, icon, color, sub }: { label: string; value: string; icon: React.ReactNode; color: 'indigo' | 'cyan' | 'purple' | 'amber'; sub: string }) {
   const colors = {
-    indigo: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400',
-    cyan: 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400',
+    indigo: 'bg-primary-100 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400',
+    cyan: 'bg-accent-100 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400',
     purple: 'bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400',
     amber: 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400',
   };
@@ -201,10 +201,10 @@ function ActivityRow({ icon, bg, label, value }: { icon: React.ReactNode; bg: st
 function TxRow({ tx }: { tx: Transaction }) {
   const d = new Date(tx.date);
   return (
-    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5 transition-colors">
+    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-primary-50/40 dark:hover:bg-primary-500/5 transition-colors">
       <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${tx.type === 'print' ? 'bg-indigo-100 dark:bg-indigo-500/15' : 'bg-cyan-100 dark:bg-cyan-500/15'}`}>
-          {tx.type === 'print' ? <Printer className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> : <Copy className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />}
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${tx.type === 'print' ? 'bg-primary-100 dark:bg-primary-500/15' : 'bg-accent-100 dark:bg-accent-500/15'}`}>
+          {tx.type === 'print' ? <Printer className="w-4 h-4 text-primary-600 dark:text-primary-400" /> : <Copy className="w-4 h-4 text-accent-600 dark:text-accent-400" />}
         </div>
         <div>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-200">

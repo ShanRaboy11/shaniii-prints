@@ -189,7 +189,7 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm'
+                  ? 'bg-white dark:bg-slate-800 text-primary-600 dark:text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
@@ -204,9 +204,9 @@ export default function SettingsPage() {
       {activeTab === 'estimator' && (
         <div className="space-y-5 max-w-3xl">
           {/* Info Banner */}
-          <div className="flex items-start gap-3 p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/5 border border-indigo-200/50 dark:border-indigo-500/20">
-            <Info className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-primary-50/80 dark:bg-primary-500/5 border border-primary-200/50 dark:border-primary-500/20">
+            <Info className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-primary-700 dark:text-primary-300 leading-relaxed">
               Configure your printer and ink costs below. The system will automatically estimate the ink and paper cost per transaction for accurate profit tracking.
             </p>
           </div>
@@ -214,7 +214,7 @@ export default function SettingsPage() {
           {/* Printer Selection */}
           <div className="glass-card p-6">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/15 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-500/15 flex items-center justify-center text-primary-600 dark:text-primary-400">
                 <Printer className="w-5 h-5" />
               </div>
               <div>
@@ -290,7 +290,7 @@ export default function SettingsPage() {
           {/* Ink Costs */}
           <div className="glass-card p-6">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-500/15 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+              <div className="w-10 h-10 rounded-xl bg-accent-100 dark:bg-accent-500/15 flex items-center justify-center text-accent-600 dark:text-accent-400">
                 <Droplets className="w-5 h-5" />
               </div>
               <div>
@@ -381,9 +381,9 @@ export default function SettingsPage() {
           </div>
 
           {/* Cost Summary Card */}
-          <div className="glass-card p-6 border-indigo-200/40 dark:border-indigo-500/20">
+          <div className="glass-card p-6 border-primary-200/40 dark:border-primary-500/20">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white">
                 <Calculator className="w-5 h-5" />
               </div>
               <div>

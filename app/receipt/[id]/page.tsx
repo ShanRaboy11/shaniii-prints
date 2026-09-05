@@ -148,7 +148,7 @@ export default function ReceiptPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] dark:bg-[#0b1121]">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -178,11 +178,11 @@ export default function ReceiptPage() {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-400 flex items-center justify-center text-white">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-accent-400 flex items-center justify-center text-white">
               <Printer size={18} strokeWidth={2.5} />
             </div>
             <span className="text-lg font-bold dark:text-white">
-              Shanii<span className="text-indigo-500">Prints</span>
+              Shanii<span className="text-primary-500">Prints</span>
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Digital Receipt</p>
@@ -191,7 +191,7 @@ export default function ReceiptPage() {
         {/* Receipt Card */}
         <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden">
           {/* Receipt ID Banner */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-center">
+          <div className="bg-gradient-to-r from-primary-500 to-purple-500 px-6 py-3 text-center">
             <p className="text-[10px] text-white/70 uppercase tracking-wider font-semibold">Receipt ID</p>
             <p className="text-sm font-mono font-bold text-white">{receiptId}</p>
           </div>
@@ -245,10 +245,10 @@ export default function ReceiptPage() {
             </div>
 
             {/* Total */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-500/10 dark:to-purple-500/10 border border-indigo-100/60 dark:border-indigo-500/20">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-500/10 dark:to-purple-500/10 border border-primary-100/60 dark:border-primary-500/20">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Total Paid</span>
-                <span className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">₱{transaction.final_total}</span>
+                <span className="text-2xl font-extrabold text-primary-600 dark:text-primary-400">₱{transaction.final_total}</span>
               </div>
             </div>
 

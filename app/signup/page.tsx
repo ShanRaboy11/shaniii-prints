@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Printer, Mail, Lock, Eye, EyeOff, User, ArrowRight, Shield, ShoppingBag } from 'lucide-react';
 import { signUp, UserRole } from '@/lib/auth';
 import { useToast } from '@/components/ToastProvider';
+import { AnimatedDotGrid } from '@/components/AnimatedDotGrid';
+import { Footer } from '@/components/Footer';
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -41,16 +43,20 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#f0f4f8] dark:bg-[#0b1121] relative overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-10 right-1/3 w-96 h-96 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 left-1/4 w-80 h-80 rounded-full bg-cyan-500/8 blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14] relative overflow-hidden">
+      {/* Animated grid of pulsing dots */}
+      <AnimatedDotGrid />
 
-      <div className="relative w-full max-w-md">
+      {/* Ambient glows on top of the grid for extra depth */}
+      <div className="absolute top-10 right-1/3 w-96 h-96 rounded-full bg-primary-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 left-1/4 w-80 h-80 rounded-full bg-accent-500/10 blur-3xl pointer-events-none" />
+
+      <div className="relative flex-1 flex items-center justify-center px-4 pt-28 pb-12">
+        <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary-600 to-accent-400 flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
               <Printer size={22} strokeWidth={2.5} />
             </div>
           </Link>
@@ -62,8 +68,8 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-3xl p-8 shadow-xl">
+        {/* Frosted, floating form card */}
+        <div className="bg-white/75 dark:bg-slate-900/50 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-3xl p-8 shadow-2xl shadow-slate-300/40 dark:shadow-black/50">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Role Selection */}
             <div>
@@ -76,7 +82,7 @@ export default function SignupPage() {
                   onClick={() => setRole('owner')}
                   className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
                     role === 'owner'
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 shadow-sm'
                       : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-white/20'
                   }`}
                 >
@@ -88,7 +94,7 @@ export default function SignupPage() {
                   onClick={() => setRole('customer')}
                   className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
                     role === 'customer'
-                      ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                      ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300 shadow-sm'
                       : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-white/20'
                   }`}
                 >
@@ -189,12 +195,15 @@ export default function SignupPage() {
           {/* Login Link */}
           <p className="text-center text-sm text-slate-500 dark:text-slate-400">
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+            <Link href="/login" className="font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
               Sign in
             </Link>
           </p>
         </div>
+        </div>
       </div>
+
+      <Footer />
     </div>
   );
 }
