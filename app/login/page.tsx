@@ -62,8 +62,10 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Frosted, floating form card */}
-          <div className="bg-white/75 dark:bg-slate-900/50 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-3xl p-8 shadow-2xl shadow-slate-300/40 dark:shadow-black/50">
+          {/* Frosted, floating glassmorphic form card */}
+          <div className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-2xl border border-white/70 dark:border-white/15 rounded-3xl p-8 shadow-2xl shadow-primary-500/10 dark:shadow-black/60 ring-1 ring-white/40 dark:ring-white/5">
+            {/* subtle top-edge highlight for extra glass realism */}
+            <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/20 to-transparent" />
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div>

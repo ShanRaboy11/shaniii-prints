@@ -1,55 +1,70 @@
 'use client';
 
+import { useMemo } from 'react';
+
 /**
  * AnimatedDotGrid
- * A transparent, decorative background of subtle pulsing/drifting circle dots
- * arranged in a grid pattern. Purely presentational — no logic, no state
- * that affects the rest of the app. Safe to drop into any relative/absolute
- * positioned container.
+ * A dot-matrix background: an evenly-spaced grid of circular dots (not lines)
+ * with layered pulsing + slow drifting movement, plus a scattered set of
+ * brighter "twinkle" dots for depth. Purely presentational — no logic/state.
  */
 export function AnimatedDotGrid() {
-  // Pre-computed grid of dots with varied delay/duration for organic pulsing.
-  const dots = Array.from({ length: 64 }, (_, i) => {
-    const col = i % 8;
-    const row = Math.floor(i / 8);
-    const delay = ((col * 7 + row * 3) % 20) / 4; // 0 - 5s
-    const duration = 3.5 + ((col + row) % 4) * 0.6; // 3.5 - 5.9s
-    return { id: i, col, row, delay, duration };
-  });
+  // A scattered set of brighter accent dots that twinkle at random intervals.
+  const twinkles = useMemo(
+    () =>
+      Array.from({ length: 26 }, (_, i) => ({
+        id: i,
+        top: Math.round((Math.sin(i * 12.9898) * 43758.5453 % 1 + 1) % 1 * 100),
+        left: Math.round((Math.cos(i * 78.233) * 12543.1234 % 1 + 1) % 1 * 100),
+        delay: (i % 10) * 0.45,
+        duration: 2.8 + (i % 5) * 0.7,
+        accent: i % 2 === 0,
+      })),
+    []
+  );
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
-      {/* Slowly drifting grid layer */}
+      {/* Base matrix: evenly-spaced circle dots, gentle pulse via opacity */}
       <div
-        className="absolute inset-0 opacity-[0.35] dark:opacity-[0.5]"
+        className="absolute inset-0 animate-[dotPulse_5s_ease-in-out_infinite]"
         style={{
           backgroundImage:
-            'radial-gradient(circle, rgba(14,165,233,0.35) 1.5px, transparent 1.5px)',
-          backgroundSize: '32px 32px',
-          animation: 'dotDrift 18s linear infinite',
+            'radial-gradient(circle, rgba(14,165,233,0.45) 1.6px, transparent 1.8px)',
+          backgroundSize: '30px 30px',
         }}
       />
 
-      {/* Foreground pulsing dots grid */}
-      <div className="absolute inset-0 grid grid-cols-8 grid-rows-8">
-        {dots.map((d) => (
-          <div key={d.id} className="relative flex items-center justify-center">
-            <span
-              className={`block w-1.5 h-1.5 rounded-full ${
-                d.id % 3 === 0
-                  ? 'bg-primary-400/70 dark:bg-primary-300/70'
-                  : 'bg-accent-400/60 dark:bg-accent-300/60'
-              }`}
-              style={{
-                animation: `dotPulse ${d.duration}s ease-in-out ${d.delay}s infinite`,
-              }}
-            />
-          </div>
-        ))}
-      </div>
+      {/* Second matrix layer: light green, offset + slow drift for parallax depth */}
+      <div
+        className="absolute inset-0 opacity-70 animate-[dotDrift_22s_linear_infinite]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle, rgba(34,197,94,0.30) 1.4px, transparent 1.6px)',
+          backgroundSize: '30px 30px',
+          backgroundPosition: '15px 15px',
+        }}
+      />
 
-      {/* Soft radial fade so the grid recedes toward the edges */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(244,248,251,0.9)_75%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,11,20,0.92)_75%)]" />
+      {/* Scattered brighter twinkle dots */}
+      {twinkles.map((t) => (
+        <span
+          key={t.id}
+          className={`absolute w-1.5 h-1.5 rounded-full ${
+            t.accent
+              ? 'bg-accent-400/80 dark:bg-accent-300/80'
+              : 'bg-primary-400/80 dark:bg-primary-300/80'
+          }`}
+          style={{
+            top: `${t.top}%`,
+            left: `${t.left}%`,
+            animation: `dotPulse ${t.duration}s ease-in-out ${t.delay}s infinite`,
+          }}
+        />
+      ))}
+
+      {/* Soft radial vignette so the matrix recedes toward the edges */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(244,248,251,0.85)_78%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,11,20,0.9)_78%)]" />
     </div>
   );
 }

@@ -380,7 +380,7 @@ export default function SettingsPage() {
           {/* Cost Summary Card */}
           <div className="glass-card p-6 border-primary-200/40 dark:border-primary-500/20">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center text-white">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white">
                 <Calculator className="w-5 h-5" />
               </div>
               <div>

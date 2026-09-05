@@ -239,10 +239,10 @@ export default function ReceiptPage() {
 
               {transaction.adjustment !== 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className={transaction.adjustment < 0 ? 'text-orange-500' : 'text-violet-500'}>
+                  <span className={transaction.adjustment < 0 ? 'text-orange-500' : 'text-accent-500'}>
                     {transaction.adjustment_label}
                   </span>
-                  <span className={`font-medium ${transaction.adjustment < 0 ? 'text-orange-500' : 'text-violet-500'}`}>
+                  <span className={`font-medium ${transaction.adjustment < 0 ? 'text-orange-500' : 'text-accent-500'}`}>
                     {transaction.adjustment < 0 ? '-' : '+'}₱{Math.abs(transaction.adjustment)}
                   </span>
                 </div>

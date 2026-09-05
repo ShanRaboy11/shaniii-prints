@@ -19,27 +19,17 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { Dropdown } from '@/components/Dropdown';
+import { ErrorState } from '@/components/ErrorState';
+import { useOwnerData } from '@/lib/useOwnerData';
 import {
   TransactionRecord,
-  BusinessSettings,
   getDefaultPrice,
   estimateInkCost,
   estimatePaperCost,
-  generateReceiptId,
-  getBusinessSettings,
   addTransactionDB,
-  getTransactionsDB,
   deleteTransactionDB,
   updateTransactionDB,
 } from '@/lib/db';
-import {
-  getTransactions as getLocalTransactions,
-  addTransaction as addLocalTransaction,
-  deleteTransaction as deleteLocalTransaction,
-  updateTransaction as updateLocalTransaction,
-  getSettings as getLocalSettings,
-  Transaction as LocalTransaction,
-} from '@/lib/store';
 
 type PaperSize = 'short' | 'a4' | 'long' | 'photopaper';
 type PrintType = 'print' | 'photocopy';
@@ -52,9 +42,8 @@ function getValidPapers(type: PrintType): PaperSize[] {
 export default function TransactionsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-  const [settings, setSettings] = useState<BusinessSettings | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const { transactions, settings, loading, error, reload } = useOwnerData();
+  const [saving, setSaving] = useState(false);
 
   // Modal
   const [showForm, setShowForm] = useState(false);
@@ -82,61 +71,8 @@ export default function TransactionsPage() {
   const [fFinal, setFFinal] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-    loadData();
     setNowDateTime();
-  }, [user]);
-
-  async function loadData() {
-    // Load settings
-    if (user) {
-      try {
-        const s = await getBusinessSettings(user.id);
-        if (s) setSettings(s);
-      } catch {}
-    }
-    // Try local fallback for settings
-    if (!settings) {
-      try {
-        const local = localStorage.getItem('shanii-prints-business-settings');
-        if (local) setSettings(JSON.parse(local));
-      } catch {}
-    }
-
-    // Load transactions
-    if (user) {
-      try {
-        const txs = await getTransactionsDB(user.id);
-        setTransactions(txs);
-        return;
-      } catch {}
-    }
-    // Fallback: localStorage
-    const local = getLocalTransactions();
-    setTransactions(local.map(localToRecord));
-  }
-
-  function localToRecord(t: LocalTransaction): TransactionRecord {
-    return {
-      id: t.id,
-      owner_id: user?.id || '',
-      customer_name: '',
-      paper_size: t.paperSize,
-      print_type: t.type,
-      is_colored: t.colored,
-      quantity: t.copies,
-      price_per_copy: t.pricePerCopy,
-      computed_total: t.computedTotal,
-      final_total: t.finalTotal,
-      adjustment: t.adjustment,
-      adjustment_label: t.adjustmentLabel,
-      estimated_ink_cost: 0,
-      estimated_paper_cost: 0,
-      notes: t.notes,
-      receipt_id: undefined,
-      created_at: t.date,
-    };
-  }
+  }, []);
 
   function setNowDateTime() {
     const now = new Date();
@@ -196,12 +132,15 @@ export default function TransactionsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) {
+      showToast('You must be signed in to save orders.', 'error');
+      return;
+    }
 
-    const receiptId = generateReceiptId();
     const dateTime = new Date(`${fDate}T${fTime}`).toISOString();
 
     const txData: Omit<TransactionRecord, 'id' | 'created_at'> = {
-      owner_id: user?.id || '',
+      owner_id: user.id,
       customer_name: fCustomer || undefined,
       paper_size: fPaper,
       print_type: fType,
@@ -215,71 +154,40 @@ export default function TransactionsPage() {
       estimated_ink_cost: parseFloat(inkCost.toFixed(4)),
       estimated_paper_cost: parseFloat(paperCost.toFixed(4)),
       notes: fNotes || undefined,
-      receipt_id: formMode === 'add' ? receiptId : undefined,
     };
 
+    setSaving(true);
     try {
       if (formMode === 'add') {
-        if (user) {
-          await addTransactionDB(txData);
-        } else {
-          // Local fallback
-          addLocalTransaction({
-            type: fType,
-            paperSize: fPaper,
-            copies: fCopies,
-            colored: fColored,
-            pricePerCopy,
-            computedTotal,
-            finalTotal: fFinal,
-            adjustment,
-            adjustmentLabel,
-            date: dateTime,
-            notes: fNotes || undefined,
-          });
-        }
+        const created = await addTransactionDB(txData);
         showToast('Transaction added!', 'success');
-
-        // Show QR
-        setQrReceiptId(receiptId);
-        setShowQR(true);
-      } else if (editingId) {
-        if (user) {
-          await updateTransactionDB(editingId, { ...txData, receipt_id: undefined });
-        } else {
-          updateLocalTransaction(editingId, {
-            type: fType,
-            paperSize: fPaper,
-            copies: fCopies,
-            colored: fColored,
-            pricePerCopy,
-            computedTotal,
-            finalTotal: fFinal,
-            adjustment,
-            adjustmentLabel,
-            date: dateTime,
-            notes: fNotes || undefined,
-          });
+        if (created?.receipt_id) {
+          setQrReceiptId(created.receipt_id);
+          setShowQR(true);
         }
+      } else if (editingId) {
+        await updateTransactionDB(editingId, txData);
         showToast('Transaction updated!', 'success');
       }
+      await reload();
+      setShowForm(false);
+      resetForm();
     } catch (err: any) {
-      showToast(err.message || 'Error saving', 'error');
+      showToast(err?.message || 'Error saving transaction', 'error');
+    } finally {
+      setSaving(false);
     }
-
-    await loadData();
-    setShowForm(false);
-    resetForm();
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this transaction?')) return;
     try {
-      if (user) await deleteTransactionDB(id);
-      else deleteLocalTransaction(id);
+      await deleteTransactionDB(id);
       showToast('Deleted', 'info');
-      await loadData();
-    } catch { showToast('Error deleting', 'error'); }
+      await reload();
+    } catch (err: any) {
+      showToast(err?.message || 'Error deleting', 'error');
+    }
   }
 
   function exportCSV() {
@@ -313,7 +221,8 @@ export default function TransactionsPage() {
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const validPapers = getValidPapers(fType);
 
-  if (!mounted) return <Skeleton />;
+  if (loading) return <Skeleton />;
+  if (error) return <div className="pt-4"><ErrorState message={error} onRetry={reload} /></div>;
 
   return (
     <div className="animate-fade-in relative">
@@ -488,7 +397,7 @@ export default function TransactionsPage() {
                   </div>
 
                   {adjustment !== 0 && (
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${adjustment < 0 ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'}`}>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${adjustment < 0 ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-400'}`}>
                       {adjustment < 0 ? <><ArrowDown className="w-3.5 h-3.5" /> Discount: -₱{Math.abs(adjustment)}</> : <><ArrowUp className="w-3.5 h-3.5" /> Additional: +₱{adjustment}</>}
                     </div>
                   )}
@@ -497,9 +406,9 @@ export default function TransactionsPage() {
 
               {/* Actions */}
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-ghost flex-1 !rounded-xl">Cancel</button>
-                <button type="submit" className="btn-primary-gradient flex-1 !rounded-xl">
-                  {formMode === 'add' ? 'Save & Generate Receipt' : 'Update'}
+                <button type="button" onClick={() => setShowForm(false)} className="btn-ghost flex-1 !rounded-xl" disabled={saving}>Cancel</button>
+                <button type="submit" className="btn-primary-gradient flex-1 !rounded-xl" disabled={saving}>
+                  {saving ? 'Saving…' : formMode === 'add' ? 'Save & Generate Receipt' : 'Update'}
                 </button>
               </div>
             </form>
@@ -577,7 +486,7 @@ export default function TransactionsPage() {
                     <td><span className={`badge ${tx.print_type === 'print' ? 'badge-print' : 'badge-photocopy'}`}>{tx.print_type}</span></td>
                     <td>
                       <span className={`badge badge-${tx.paper_size}`}>{tx.paper_size === 'photopaper' ? 'Photo' : tx.paper_size}</span>
-                      {tx.is_colored && <span className="badge bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 ml-1">CLR</span>}
+                      {tx.is_colored && <span className="badge bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300 ml-1">CLR</span>}
                     </td>
                     <td className="font-semibold">{tx.quantity}</td>
                     <td className="font-bold text-slate-900 dark:text-white">₱{tx.final_total}</td>
