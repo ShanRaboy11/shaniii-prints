@@ -15,10 +15,10 @@ import {
   Info,
   Database,
   Wallet,
-  ChevronDown,
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
+import { Dropdown } from '@/components/Dropdown';
 import {
   BusinessSettings,
   PRINTER_PRESETS,
@@ -226,23 +226,20 @@ export default function SettingsPage() {
             <div className="space-y-4">
               {/* Printer Dropdown */}
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <label htmlFor="printer-model" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Printer Model
                 </label>
-                <div className="relative">
-                  <select
-                    value={printerModel}
-                    onChange={(e) => handlePrinterChange(e.target.value)}
-                    className="select"
-                  >
-                    {Object.entries(PRINTER_PRESETS).map(([key, preset]) => (
-                      <option key={key} value={key}>
-                        {preset.label}
-                        {key !== 'custom' && ` — B&W: ${preset.bw_yield.toLocaleString()} pages`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Dropdown
+                  id="printer-model"
+                  value={printerModel}
+                  onChange={handlePrinterChange}
+                  options={Object.entries(PRINTER_PRESETS).map(([key, preset]) => ({
+                    value: key,
+                    label: key !== 'custom'
+                      ? `${preset.label} — B&W: ${preset.bw_yield.toLocaleString()} pages`
+                      : preset.label,
+                  }))}
+                />
               </div>
 
               {/* Yields */}

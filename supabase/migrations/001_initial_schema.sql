@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   item_name TEXT NOT NULL,
   category TEXT DEFAULT 'general',
+  entry_type TEXT NOT NULL DEFAULT 'expense' CHECK (entry_type IN ('expense', 'capital')),
   quantity INTEGER DEFAULT 1,
   unit_price DECIMAL(10,2) DEFAULT 0,
   total_cost DECIMAL(10,2) DEFAULT 0,
@@ -73,6 +74,9 @@ CREATE TABLE IF NOT EXISTS expenses (
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure entry_type exists if the table was created before this column was introduced
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS entry_type TEXT NOT NULL DEFAULT 'expense';
 
 -- ============================================
 -- TRANSACTIONS

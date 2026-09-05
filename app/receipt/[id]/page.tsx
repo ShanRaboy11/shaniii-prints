@@ -15,6 +15,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { getTransactionByReceiptId, TransactionRecord } from '@/lib/db';
+import { Footer } from '@/components/Footer';
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -91,7 +92,7 @@ export default function ReceiptPage() {
           body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 40px; max-width: 400px; margin: 0 auto; color: #1e293b; }
           .header { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px dashed #e2e8f0; }
           .logo { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-          .logo span { color: #6366f1; }
+          .logo span { color: #0ea5e9; }
           .subtitle { font-size: 11px; color: #64748b; }
           .receipt-id { font-size: 10px; color: #94a3b8; margin-top: 8px; font-family: monospace; }
           .section { margin-bottom: 16px; }
@@ -100,7 +101,7 @@ export default function ReceiptPage() {
           .row-value { font-weight: 600; }
           .divider { border-top: 1px dashed #e2e8f0; margin: 12px 0; }
           .total-row { font-size: 16px; font-weight: 800; padding: 12px 0; }
-          .total-row .row-value { color: #6366f1; }
+          .total-row .row-value { color: #0ea5e9; }
           .footer { text-align: center; margin-top: 24px; padding-top: 16px; border-top: 2px dashed #e2e8f0; font-size: 11px; color: #94a3b8; }
           .adjustment { font-size: 11px; color: ${transaction.adjustment < 0 ? '#ea580c' : '#7c3aed'}; }
           @media print { body { padding: 20px; } }
@@ -147,7 +148,7 @@ export default function ReceiptPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] dark:bg-[#0b1121]">
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f8fb] dark:bg-[#070b14]">
         <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -155,15 +156,18 @@ export default function ReceiptPage() {
 
   if (error || !transaction) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] dark:bg-[#0b1121] px-4">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center">
-            <FileText className="w-7 h-7 text-slate-300 dark:text-slate-600" />
+      <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14]">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+              <FileText className="w-7 h-7 text-slate-300 dark:text-slate-600" />
+            </div>
+            <h1 className="text-lg font-bold text-slate-800 dark:text-white mb-1">Receipt not found</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">This receipt ID doesn&apos;t exist or has been deleted.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-mono">{receiptId}</p>
           </div>
-          <h1 className="text-lg font-bold text-slate-800 dark:text-white mb-1">Receipt not found</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">This receipt ID doesn&apos;t exist or has been deleted.</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-mono">{receiptId}</p>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -173,7 +177,8 @@ export default function ReceiptPage() {
   const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#0b1121] py-8 px-4">
+    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14]">
+      <div className="flex-1 py-12 px-4">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
@@ -191,7 +196,7 @@ export default function ReceiptPage() {
         {/* Receipt Card */}
         <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden">
           {/* Receipt ID Banner */}
-          <div className="bg-gradient-to-r from-primary-500 to-purple-500 px-6 py-3 text-center">
+          <div className="bg-gradient-to-r from-primary-500 to-accent-500 px-6 py-3 text-center">
             <p className="text-[10px] text-white/70 uppercase tracking-wider font-semibold">Receipt ID</p>
             <p className="text-sm font-mono font-bold text-white">{receiptId}</p>
           </div>
@@ -245,7 +250,7 @@ export default function ReceiptPage() {
             </div>
 
             {/* Total */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-500/10 dark:to-purple-500/10 border border-primary-100/60 dark:border-primary-500/20">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-500/10 dark:to-accent-500/10 border border-primary-100/60 dark:border-primary-500/20">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Total Paid</span>
                 <span className="text-2xl font-extrabold text-primary-600 dark:text-primary-400">₱{transaction.final_total}</span>
@@ -278,6 +283,8 @@ export default function ReceiptPage() {
           Thank you for your business! &mdash; Shanii Prints &copy; {new Date().getFullYear()}
         </p>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }

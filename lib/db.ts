@@ -41,11 +41,14 @@ export interface TransactionRecord {
   created_at?: string;
 }
 
+export type EntryType = 'expense' | 'capital';
+
 export interface Expense {
   id?: string;
   owner_id: string;
   item_name: string;
   category: string;
+  entry_type: EntryType;
   quantity: number;
   unit_price: number;
   total_cost: number;
@@ -53,6 +56,24 @@ export interface Expense {
   notes?: string;
   created_at?: string;
 }
+
+// Expense categories for the dropdown
+export const EXPENSE_CATEGORIES = [
+  { value: 'ink', label: 'Ink & Toner' },
+  { value: 'paper', label: 'Paper & Supplies' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'rent', label: 'Rent' },
+  { value: 'general', label: 'General' },
+] as const;
+
+export const CAPITAL_CATEGORIES = [
+  { value: 'equipment', label: 'Equipment Investment' },
+  { value: 'startup', label: 'Startup Capital' },
+  { value: 'expansion', label: 'Expansion' },
+  { value: 'general', label: 'General Capital' },
+] as const;
 
 // --- Printer Presets ---
 
@@ -240,6 +261,18 @@ export async function addExpense(expense: Omit<Expense, 'id' | 'created_at'>): P
   return data as Expense;
 }
 
+export async function updateExpense(id: string, updates: Partial<Expense>): Promise<Expense> {
+  const { data, error } = await supabase
+    .from('expenses')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Expense;
+}
+
 export async function deleteExpense(id: string): Promise<void> {
   const { error } = await supabase
     .from('expenses')
@@ -247,6 +280,30 @@ export async function deleteExpense(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw error;
+}
+
+// Total expenses (entry_type = 'expense'), optionally within a month
+export function sumExpenses(expenses: Expense[]): number {
+  return expenses
+    .filter((e) => e.entry_type === 'expense')
+    .reduce((sum, e) => sum + (e.total_cost || 0), 0);
+}
+
+// Total capital invested (entry_type = 'capital')
+export function sumCapital(expenses: Expense[]): number {
+  return expenses
+    .filter((e) => e.entry_type === 'capital')
+    .reduce((sum, e) => sum + (e.total_cost || 0), 0);
+}
+
+export function sumMonthlyExpenses(expenses: Expense[], year: number, month: number): number {
+  return expenses
+    .filter((e) => {
+      if (e.entry_type !== 'expense') return false;
+      const d = new Date(e.date_bought);
+      return d.getFullYear() === year && d.getMonth() === month;
+    })
+    .reduce((sum, e) => sum + (e.total_cost || 0), 0);
 }
 
 // ============================================
@@ -280,4 +337,75 @@ export async function getTodayRevenueDB(ownerId: string): Promise<number> {
 
   if (error || !data) return 0;
   return data.reduce((sum, t) => sum + (t.final_total || 0), 0);
+}
+
+// ============================================
+// CLIENT-SIDE ANALYTICS (operate on already-fetched TransactionRecord[])
+// Keeps a single source of truth so every page computes metrics identically.
+// ============================================
+
+export function txTotalRevenue(txs: TransactionRecord[]): number {
+  return txs.reduce((sum, t) => sum + (t.final_total || 0), 0);
+}
+
+export function txTodayRevenue(txs: TransactionRecord[]): number {
+  const today = new Date().toISOString().split('T')[0];
+  return txs
+    .filter((t) => (t.created_at || '').split('T')[0] === today)
+    .reduce((sum, t) => sum + (t.final_total || 0), 0);
+}
+
+export function txWeeklyRevenue(txs: TransactionRecord[]): number {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  return txs
+    .filter((t) => new Date(t.created_at || 0) >= weekAgo)
+    .reduce((sum, t) => sum + (t.final_total || 0), 0);
+}
+
+export function txMonthlyRevenue(txs: TransactionRecord[], year: number, month: number): number {
+  return txs
+    .filter((t) => {
+      const d = new Date(t.created_at || 0);
+      return d.getFullYear() === year && d.getMonth() === month;
+    })
+    .reduce((sum, t) => sum + (t.final_total || 0), 0);
+}
+
+export function txTotalDiscounts(txs: TransactionRecord[]): number {
+  return txs.filter((t) => t.adjustment < 0).reduce((sum, t) => sum + Math.abs(t.adjustment), 0);
+}
+
+export function txTotalAdditionals(txs: TransactionRecord[]): number {
+  return txs.filter((t) => t.adjustment > 0).reduce((sum, t) => sum + t.adjustment, 0);
+}
+
+export function txByType(txs: TransactionRecord[]) {
+  return {
+    prints: txs.filter((t) => t.print_type === 'print'),
+    photocopies: txs.filter((t) => t.print_type === 'photocopy'),
+  };
+}
+
+export function txByPaper(txs: TransactionRecord[]) {
+  return {
+    short: txs.filter((t) => t.paper_size === 'short'),
+    a4: txs.filter((t) => t.paper_size === 'a4'),
+    long: txs.filter((t) => t.paper_size === 'long'),
+    photopaper: txs.filter((t) => t.paper_size === 'photopaper'),
+  };
+}
+
+export function txMonthlySeries(txs: TransactionRecord[], months = 6) {
+  const data: { month: string; revenue: number }[] = [];
+  const now = new Date();
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const revenue = txMonthlyRevenue(txs, d.getFullYear(), d.getMonth());
+    data.push({ month: d.toLocaleString('default', { month: 'short', year: '2-digit' }), revenue });
+  }
+  return data;
+}
+
+export function txTotalInkCost(txs: TransactionRecord[]): number {
+  return txs.reduce((sum, t) => sum + (t.estimated_ink_cost || 0) + (t.estimated_paper_cost || 0), 0);
 }

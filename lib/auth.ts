@@ -48,8 +48,26 @@ export async function signIn(email: string, password: string) {
 }
 
 // --- Sign Out ---
+// Invalidates the Supabase session (clears its auth token from storage)
+// and wipes any app-specific cached data from localStorage.
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
+
+  if (typeof window !== 'undefined') {
+    try {
+      // Clear legacy/local app caches so no stale owner data lingers.
+      localStorage.removeItem('shanii-prints-transactions');
+      localStorage.removeItem('shanii-prints-settings');
+      localStorage.removeItem('shanii-prints-business-settings');
+      // Clear any leftover Supabase auth keys defensively.
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('sb-') || k.startsWith('supabase'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // Ignore storage access errors (e.g. private mode)
+    }
+  }
+
   if (error) throw error;
 }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import ChartSetup from '@/components/charts/ChartSetup';
+import { Dropdown } from '@/components/Dropdown';
 import {
   TrendingUp,
   TrendingDown,
@@ -178,10 +179,15 @@ export default function AnalyticsPage() {
           <h1 className="page-title">Analytics</h1>
           <p className="page-subtitle">Financial insights and performance metrics.</p>
         </div>
-        <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="select w-auto">
-          <option value="6">Last 6 Months</option>
-          <option value="12">Last 12 Months</option>
-        </select>
+        <Dropdown
+          className="w-44"
+          value={period}
+          onChange={(v) => setPeriod(v as '6' | '12')}
+          options={[
+            { value: '6', label: 'Last 6 Months' },
+            { value: '12', label: 'Last 12 Months' },
+          ]}
+        />
       </div>
 
       {/* Summary Stats */}

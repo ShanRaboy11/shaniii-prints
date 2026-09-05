@@ -7,7 +7,6 @@ import {
   Trash2,
   Edit3,
   Printer,
-  Copy,
   Download,
   ArrowDown,
   ArrowUp,
@@ -19,6 +18,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
+import { Dropdown } from '@/components/Dropdown';
 import {
   TransactionRecord,
   BusinessSettings,
@@ -338,7 +338,7 @@ export default function TransactionsPage() {
         <div className="modal-overlay" onClick={() => setShowQR(false)}>
           <div className="modal !max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-500 text-white mb-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white mb-4">
                 <QrCode className="w-7 h-7" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Receipt Generated!</h3>
@@ -394,29 +394,36 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
-              {/* Type */}
+              {/* Type of Print — consistent rounded-menu dropdown */}
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Service</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setFType('print')} className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${fType === 'print' ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300' : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'}`}>
-                    <Printer className="w-4 h-4" /> Print
-                  </button>
-                  <button type="button" onClick={() => setFType('photocopy')} className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${fType === 'photocopy' ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10 text-accent-700 dark:text-accent-300' : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'}`}>
-                    <Copy className="w-4 h-4" /> Photocopy
-                  </button>
-                </div>
+                <label htmlFor="type-of-print" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Type of Print
+                </label>
+                <Dropdown
+                  id="type-of-print"
+                  value={fType}
+                  onChange={(v) => setFType(v as PrintType)}
+                  options={[
+                    { value: 'print', label: 'Print' },
+                    { value: 'photocopy', label: 'Photocopy' },
+                  ]}
+                />
               </div>
 
-              {/* Paper */}
+              {/* Type of Paper — consistent rounded-menu dropdown */}
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Paper Size</label>
-                <div className={`grid gap-2 ${validPapers.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                  {validPapers.map((s) => (
-                    <button key={s} type="button" onClick={() => setFPaper(s)} className={`p-2.5 rounded-xl border text-xs font-semibold uppercase transition-all ${fPaper === s ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300' : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'}`}>
-                      {s === 'photopaper' ? 'Photo' : s}
-                    </button>
-                  ))}
-                </div>
+                <label htmlFor="type-of-paper" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Type of Paper
+                </label>
+                <Dropdown
+                  id="type-of-paper"
+                  value={fPaper}
+                  onChange={(v) => setFPaper(v as PaperSize)}
+                  options={validPapers.map((s) => ({
+                    value: s,
+                    label: s === 'photopaper' ? 'Photo Paper' : s.toUpperCase(),
+                  }))}
+                />
               </div>
 
               {/* Colored */}
@@ -424,7 +431,7 @@ export default function TransactionsPage() {
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Colored</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={fColored} onChange={(e) => setFColored(e.target.checked)} className="sr-only peer" />
-                  <div className="w-10 h-5 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-primary-500 peer-checked:to-purple-500" />
+                  <div className="w-10 h-5 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-primary-500 peer-checked:to-accent-500" />
                 </label>
               </div>
 
@@ -507,18 +514,28 @@ export default function TransactionsPage() {
           <input type="text" placeholder="Search by customer, type..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="input pl-10" />
         </div>
         <div className="flex gap-2">
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="select">
-            <option value="all">All Types</option>
-            <option value="print">Print</option>
-            <option value="photocopy">Photocopy</option>
-          </select>
-          <select value={filterPaper} onChange={(e) => setFilterPaper(e.target.value as any)} className="select">
-            <option value="all">All Paper</option>
-            <option value="short">Short</option>
-            <option value="a4">A4</option>
-            <option value="long">Long</option>
-            <option value="photopaper">Photo</option>
-          </select>
+          <Dropdown
+            className="w-40"
+            value={filterType}
+            onChange={(v) => setFilterType(v as 'all' | PrintType)}
+            options={[
+              { value: 'all', label: 'All Types' },
+              { value: 'print', label: 'Print' },
+              { value: 'photocopy', label: 'Photocopy' },
+            ]}
+          />
+          <Dropdown
+            className="w-40"
+            value={filterPaper}
+            onChange={(v) => setFilterPaper(v as 'all' | PaperSize)}
+            options={[
+              { value: 'all', label: 'All Paper' },
+              { value: 'short', label: 'Short' },
+              { value: 'a4', label: 'A4' },
+              { value: 'long', label: 'Long' },
+              { value: 'photopaper', label: 'Photo' },
+            ]}
+          />
         </div>
       </div>
 
