@@ -1,20 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   X,
-  QrCode,
   User,
   Droplets,
   ArrowDown,
   ArrowUp,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { toBlob } from 'html-to-image';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { Dropdown } from '@/components/Dropdown';
 import { DatePicker } from '@/components/DatePicker';
 import { TimePicker } from '@/components/TimePicker';
+import { DigitalReceipt } from '@/components/DigitalReceipt';
 import {
   TransactionRecord,
   BusinessSettings,
@@ -62,9 +64,11 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
 
   const formMode: 'add' | 'edit' = editingTx ? 'edit' : 'add';
 
-  // QR Modal
-  const [showQR, setShowQR] = useState(false);
-  const [qrReceiptId, setQrReceiptId] = useState('');
+  // Receipt graphic modal (shown after a successful new order)
+  const [receiptTx, setReceiptTx] = useState<TransactionRecord | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Form fields
   const [fType, setFType] = useState<PrintType>('print');
@@ -173,10 +177,9 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
         showToast('Transaction added!', 'success');
         await onSaved();
         onClose();
-        if (created?.receipt_id) {
-          setQrReceiptId(created.receipt_id);
-          setShowQR(true);
-        }
+        // Show the full receipt graphic (with image-copy) instead of a QR code.
+        setReceiptTx(created ?? { ...txData, created_at: new Date().toISOString() });
+        setCopied(false);
       } else if (editingTx?.id) {
         await updateTransactionDB(editingTx.id, txData);
         showToast('Transaction updated!', 'success');
@@ -190,42 +193,76 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
     }
   }
 
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const validPapers = getValidPapers(fType);
+
+  // Render the on-screen receipt to a PNG and write it straight to the system
+  // clipboard so the user can paste it into Messenger/chat without downloading.
+  async function copyReceiptImage() {
+    if (!receiptRef.current) return;
+    setCopying(true);
+    try {
+      const node = receiptRef.current;
+      // Capture at the element's true size so a narrow/scrolled modal ancestor
+      // can never clip the rendered image. Explicit width/height + reset margin
+      // pin the capture box to the receipt itself.
+      const width = node.offsetWidth;
+      const height = node.offsetHeight;
+      const blob = await toBlob(node, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        width,
+        height,
+        style: {
+          margin: '0',
+          transform: 'none',
+        },
+      });
+      if (!blob) throw new Error('Could not render receipt image.');
+
+      if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
+        throw new Error('Image clipboard not supported in this browser.');
+      }
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      setCopied(true);
+      showToast('Receipt image copied — paste it anywhere!', 'success');
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to copy receipt image.', 'error');
+    } finally {
+      setCopying(false);
+    }
+  }
 
   return (
     <>
-      {/* ===== QR CODE MODAL ===== */}
-      {showQR && (
-        <div className="modal-overlay" onClick={() => setShowQR(false)}>
-          <div className="modal !max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white mb-4">
-                <QrCode className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Receipt Generated!</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">Scan or share this QR code with the customer</p>
+      {/* ===== RECEIPT GRAPHIC MODAL (after a new order) ===== */}
+      {receiptTx && (
+        <div className="modal-overlay" onClick={() => setReceiptTx(null)}>
+          <div className="modal !max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Receipt Generated</h3>
+              <button onClick={() => setReceiptTx(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-              <div className="inline-block p-4 bg-white rounded-2xl shadow-lg mb-4">
-                <QRCodeSVG
-                  value={`${appUrl}/receipt/${qrReceiptId}`}
-                  size={180}
-                  level="M"
-                  includeMargin={false}
-                />
+            <div className="p-5">
+              {/* The receipt graphic (this exact node is captured to an image) */}
+              <div className="py-2 flex justify-center overflow-x-auto">
+                <DigitalReceipt ref={receiptRef} tx={receiptTx} />
               </div>
 
-              <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mb-4 break-all">{qrReceiptId}</p>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { navigator.clipboard.writeText(`${appUrl}/receipt/${qrReceiptId}`); showToast('Link copied!', 'success'); }}
-                  className="btn-ghost flex-1 !rounded-xl"
-                >
-                  Copy Link
-                </button>
-                <button onClick={() => setShowQR(false)} className="btn-primary-gradient flex-1 !rounded-xl">
+              <div className="flex gap-2 mt-5">
+                <button onClick={() => setReceiptTx(null)} className="btn-ghost flex-1 !rounded-xl">
                   Done
+                </button>
+                <button
+                  onClick={copyReceiptImage}
+                  disabled={copying}
+                  className="btn-primary-gradient flex-1 !rounded-xl"
+                >
+                  {copied ? <><Check className="w-4 h-4" /> Copied!</> : copying ? 'Copying…' : <><Copy className="w-4 h-4" /> Copy Receipt Image</>}
                 </button>
               </div>
             </div>
@@ -292,8 +329,8 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                   </div>
                 </div>
 
-                {/* Colored + Copies */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Colored + Bond paper sheets */}
+                <div className="grid grid-cols-2 gap-3 items-end">
                   <div className="flex items-center justify-between px-3.5 py-3.5 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/10">
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Colored</span>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -302,8 +339,10 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                     </label>
                   </div>
                   <div>
+                    <label htmlFor="bond-sheets" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Bond Paper Sheets</label>
                     <input
-                      aria-label="Copies"
+                      id="bond-sheets"
+                      aria-label="Bond paper sheets"
                       type="number"
                       min="1"
                       inputMode="numeric"
@@ -311,7 +350,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                       onChange={(e) => setFCopies(e.target.value)}
                       onBlur={() => setFCopies((v) => (v.trim() === '' ? '1' : String(Math.max(1, parseInt(v, 10) || 1))))}
                       className="input-soft text-center text-lg font-bold"
-                      placeholder="Copies"
+                      placeholder="Sheets"
                     />
                   </div>
                 </div>
@@ -340,7 +379,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
               <div className="modal-section space-y-2.5">
                 <p className="modal-section-title !mb-1">Pricing</p>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 dark:text-slate-400">{fCopies} × ₱{pricePerCopy} <span className="text-[10px]">({fColored ? 'color' : 'b&w'})</span></span>
+                  <span className="text-slate-500 dark:text-slate-400">{copiesNum} sheet{copiesNum !== 1 ? 's' : ''} × ₱{pricePerCopy} <span className="text-[10px]">({fColored ? 'color' : 'b&w'})</span></span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">₱{computedTotal}</span>
                 </div>
 
@@ -352,9 +391,9 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                   </div>
                 )}
 
-                {/* Editable final */}
+                {/* Final price */}
                 <div>
-                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Final Price (editable)</label>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Final Price</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 z-10">₱</span>
                     <input

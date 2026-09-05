@@ -14,13 +14,8 @@ import {
   Palette,
   Layers,
 } from 'lucide-react';
-import { getTransactionByReceiptId, TransactionRecord, PAPER_TYPE_LABELS, PaperType } from '@/lib/db';
+import { getTransactionByReceiptId, TransactionRecord, paperTypeLabel } from '@/lib/db';
 import { Footer } from '@/components/Footer';
-
-/** Friendly paper label with a safe fallback for unknown values. */
-function paperLabel(size: string): string {
-  return PAPER_TYPE_LABELS[size as PaperType] || size.toUpperCase();
-}
 
 export default function ReceiptPage() {
   const params = useParams();
@@ -46,7 +41,7 @@ export default function ReceiptPage() {
                 id: found.id,
                 owner_id: '',
                 customer_name: found.customer_name || found.customerName || '',
-                paper_size: found.paper_size || found.paperSize || 'short',
+                paper_size: found.paper_size || found.paperSize || 'Short',
                 print_type: found.print_type || found.type || 'print',
                 is_colored: found.is_colored ?? found.colored ?? false,
                 quantity: found.quantity || found.copies || 1,
@@ -126,7 +121,7 @@ export default function ReceiptPage() {
         <div class="divider"></div>
         <div class="section">
           <div class="row"><span class="row-label">Service</span><span class="row-value">${transaction.print_type === 'print' ? 'Print' : 'Photocopy'}</span></div>
-          <div class="row"><span class="row-label">Paper</span><span class="row-value">${paperLabel(transaction.paper_size)}</span></div>
+          <div class="row"><span class="row-label">Paper</span><span class="row-value">${paperTypeLabel(transaction.paper_size)}</span></div>
           <div class="row"><span class="row-label">Color</span><span class="row-value">${transaction.is_colored ? 'Yes' : 'No (B&W)'}</span></div>
           <div class="row"><span class="row-label">Copies</span><span class="row-value">${transaction.quantity}</span></div>
           <div class="row"><span class="row-label">Price / Copy</span><span class="row-value">₱${transaction.price_per_copy}</span></div>
@@ -226,7 +221,7 @@ export default function ReceiptPage() {
                 label="Service"
                 value={transaction.print_type === 'print' ? 'Print' : 'Photocopy'}
               />
-              <DetailRow icon={<Layers className="w-3.5 h-3.5" />} label="Paper" value={paperLabel(transaction.paper_size)} />
+              <DetailRow icon={<Layers className="w-3.5 h-3.5" />} label="Paper" value={paperTypeLabel(transaction.paper_size)} />
               <DetailRow icon={<Palette className="w-3.5 h-3.5" />} label="Color" value={transaction.is_colored ? 'Colored' : 'Black & White'} />
               <DetailRow icon={<Hash className="w-3.5 h-3.5" />} label="Copies" value={String(transaction.quantity)} />
             </div>

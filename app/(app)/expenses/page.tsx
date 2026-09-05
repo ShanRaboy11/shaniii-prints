@@ -415,12 +415,18 @@ export default function ExpensesPage() {
                       <input
                         type="number"
                         min="0"
+                        max="99999"
                         step="0.5"
                         inputMode="decimal"
                         value={fUnitPrice}
                         onChange={(e) => setFUnitPrice(e.target.value)}
-                        onBlur={() => setFUnitPrice((v) => (v.trim() === '' ? '0' : String(parseFloat(v) || 0)))}
-                        className="input-soft pl-8 font-bold"
+                        onBlur={() => setFUnitPrice((v) => {
+                          if (v.trim() === '') return '0';
+                          // Accept up to 5-digit prices (cap at 99,999).
+                          const n = Math.min(99999, parseFloat(v) || 0);
+                          return String(n);
+                        })}
+                        className="input-soft pl-8 pr-3 font-bold min-w-0"
                       />
                     </div>
                   </div>

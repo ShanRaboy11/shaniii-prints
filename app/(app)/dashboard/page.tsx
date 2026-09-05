@@ -25,7 +25,6 @@ import {
   txMonthlyRevenue,
   txTotalRevenue,
   txTotalDiscounts,
-  txTotalAdditionals,
   sumExpenses,
   sumCapital,
   sumMonthlyExpenses,
@@ -45,7 +44,6 @@ export default function DashboardPage() {
   const monthlyRevenue = txMonthlyRevenue(transactions, now.getFullYear(), now.getMonth());
   const totalRevenue = txTotalRevenue(transactions);
   const totalDiscounts = txTotalDiscounts(transactions);
-  const totalAdditionals = txTotalAdditionals(transactions);
 
   // Financials integrated from the expenses table
   const capital = sumCapital(expenses);
@@ -147,21 +145,14 @@ export default function DashboardPage() {
 
           {/* Adjustments */}
           <div className="glass-card p-5">
-            <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Price Adjustments</h3>
+            <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Discounts</h3>
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Tag className="w-3.5 h-3.5 text-orange-500" />
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Discounts</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total discounts given</span>
                 </div>
                 <span className="text-sm font-bold text-orange-600 dark:text-orange-400">-₱{totalDiscounts.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Plus className="w-3.5 h-3.5 text-accent-500" />
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Additionals</span>
-                </div>
-                <span className="text-sm font-bold text-accent-600 dark:text-accent-400">+₱{totalAdditionals.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -262,8 +253,8 @@ function TxRow({ tx }: { tx: TransactionRecord }) {
             {tx.is_colored && <span className="text-[10px] text-accent-600 dark:text-accent-400 ml-1 font-bold">(CLR)</span>}
           </p>
           <p className="text-[11px] text-slate-400 dark:text-slate-500">
-            {tx.customer_name ? `${tx.customer_name} · ` : ''}{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} &middot; {tx.quantity} {tx.quantity === 1 ? 'copy' : 'copies'}
-            {tx.adjustment !== 0 && <span className={`ml-1 font-medium ${tx.adjustment < 0 ? 'text-orange-500' : 'text-accent-500'}`}>({tx.adjustment_label})</span>}
+            {tx.customer_name ? `${tx.customer_name} · ` : ''}{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} &middot; {tx.quantity} {tx.quantity === 1 ? 'sheet' : 'sheets'}
+            {tx.adjustment < 0 && <span className="ml-1 font-medium text-orange-500">({tx.adjustment_label})</span>}
           </p>
         </div>
       </div>

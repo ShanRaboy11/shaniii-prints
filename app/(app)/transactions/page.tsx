@@ -23,7 +23,7 @@ import {
   TransactionRecord,
   PaperType,
   PAPER_TYPES,
-  PAPER_TYPE_LABELS,
+  paperTypeLabel,
   deleteTransactionDB,
 } from '@/lib/db';
 
@@ -229,27 +229,32 @@ export default function TransactionsPage() {
                 {pagedTx.map((tx) => {
                   const d = new Date(tx.created_at || '');
                   return (
-                    <tr key={tx.id}>
+                    <tr
+                      key={tx.id}
+                      onClick={() => { if (tx.receipt_id) { setQrReceiptId(tx.receipt_id); setShowQR(true); } }}
+                      className={tx.receipt_id ? 'cursor-pointer' : ''}
+                      title={tx.receipt_id ? 'Click to view receipt QR' : undefined}
+                    >
                       <td className="text-center">
                         <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                         <div className="text-[11px] text-slate-400">{d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
                       </td>
                       <td className="text-center text-sm text-slate-600 dark:text-slate-300">{tx.customer_name || <span className="text-slate-400">Walk-in</span>}</td>
                       <td className="text-center"><span className={`badge ${tx.print_type === 'print' ? 'badge-print' : 'badge-photocopy'}`}>{tx.print_type}</span></td>
-                      <td className="text-center"><span className="badge badge-paper">{PAPER_TYPE_LABELS[tx.paper_size as PaperType] || tx.paper_size}</span></td>
+                      <td className="text-center"><span className="badge badge-paper">{paperTypeLabel(tx.paper_size)}</span></td>
                       <td className="text-center font-semibold">{tx.quantity}</td>
                       <td className="text-center font-bold text-slate-900 dark:text-white">₱{tx.final_total}</td>
                       <td className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           {tx.receipt_id && (
-                            <button onClick={() => { setQrReceiptId(tx.receipt_id!); setShowQR(true); }} className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Show QR">
+                            <button onClick={(e) => { e.stopPropagation(); setQrReceiptId(tx.receipt_id!); setShowQR(true); }} className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Show QR">
                               <QrCode className="w-3.5 h-3.5" />
                             </button>
                           )}
-                          <button onClick={() => openEdit(tx)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
+                          <button onClick={(e) => { e.stopPropagation(); openEdit(tx); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => handleDelete(tx.id!)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(tx.id!); }} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -296,10 +301,10 @@ export default function TransactionsPage() {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-slate-500 dark:text-slate-400">Paper</span>
-                        <span className="badge badge-paper">{PAPER_TYPE_LABELS[tx.paper_size as PaperType] || tx.paper_size}</span>
+                        <span className="badge badge-paper">{paperTypeLabel(tx.paper_size)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500 dark:text-slate-400">Copies</span>
+                        <span className="text-slate-500 dark:text-slate-400">Sheets</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-200">{tx.quantity}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">

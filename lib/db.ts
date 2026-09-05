@@ -109,6 +109,12 @@ export const PAPER_TYPE_LABELS: Record<PaperType, string> = PAPER_TYPES.reduce(
   {} as Record<PaperType, string>
 );
 
+/** Display label for a paper type with the first letter capitalized. */
+export function paperTypeLabel(size: string): string {
+  const raw = PAPER_TYPE_LABELS[size as PaperType] || size;
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 // --- Pricing Defaults ---
 // B&W: standard sizes 3-4 | Colored: standard sizes 5-6 | specialty stocks priced per sheet.
 export const PRICING = {
