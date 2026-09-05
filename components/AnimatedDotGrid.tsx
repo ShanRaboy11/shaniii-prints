@@ -81,9 +81,10 @@ export function AnimatedDotGrid() {
       const green = dark ? '74, 222, 128' : '34, 197, 94';
 
       // Uniform pulse: shared sine so all dots breathe together.
-      const pulse = (Math.sin(t * 1.6) + 1) / 2; // 0..1
-      const radius = BASE_RADIUS + pulse * 0.7;
-      const baseAlpha = 0.35 + pulse * 0.35;
+      // Kept slow + low-amplitude so the effect is calm and understated.
+      const pulse = (Math.sin(t * 1.1) + 1) / 2; // 0..1, gentle cadence
+      const radius = BASE_RADIUS + pulse * 0.35;
+      const baseAlpha = 0.14 + pulse * 0.12; // soft, low-opacity dots
 
       for (let i = 0; i < dots.length; i++) {
         const d = dots[i];
@@ -107,15 +108,15 @@ export function AnimatedDotGrid() {
         d.x += (tx - d.x) * 0.16;
         d.y += (ty - d.y) * 0.16;
 
-        // Dots near the cursor glow a touch brighter/larger
+        // Dots near the cursor glow a touch brighter/larger (kept subtle)
         let alpha = baseAlpha;
         let rad = radius;
         if (pointer.active) {
           const pd = Math.hypot(d.hx - pointer.x, d.hy - pointer.y);
           if (pd < REPEL_RADIUS) {
             const f = 1 - pd / REPEL_RADIUS;
-            alpha = Math.min(1, baseAlpha + f * 0.5);
-            rad = radius + f * 1.2;
+            alpha = Math.min(0.75, baseAlpha + f * 0.35);
+            rad = radius + f * 0.9;
           }
         }
 

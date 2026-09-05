@@ -2,48 +2,57 @@
 
 import Link from 'next/link';
 import { Printer, Mail, Github, Twitter } from 'lucide-react';
+import { useAuth } from './AuthProvider';
 
 /**
- * Rich, professional multi-column footer used across all user-facing pages.
- * Frosted glass surface, branded messaging, organized resource columns,
- * and legal/copyright row. Presentational only.
+ * Rich, fully responsive multi-column footer used across all user-facing pages.
+ * Frosted glass surface, branded messaging, organized resource columns, and a
+ * legal/copyright row. The "Account" column (sign in / create account) is
+ * conditionally hidden whenever a user is actively logged in.
  */
 export function Footer() {
   const year = new Date().getFullYear();
+  const { isAuthenticated } = useAuth();
 
-  const columns: { title: string; links: { label: string; href: string }[] }[] = [
-    {
-      title: 'Product',
-      links: [
-        { label: 'Dashboard', href: '/dashboard' },
-        { label: 'Orders', href: '/transactions' },
-        { label: 'Profit Analytics', href: '/analytics' },
-        { label: 'Expenses', href: '/expenses' },
-      ],
-    },
-    {
-      title: 'Account',
-      links: [
-        { label: 'Settings', href: '/settings' },
-        { label: 'Sign In', href: '/login' },
-        { label: 'Create Account', href: '/signup' },
-      ],
-    },
-    {
-      title: 'Resources',
-      links: [
-        { label: 'Getting Started', href: '/dashboard' },
-        { label: 'Ink Estimator', href: '/settings' },
-        { label: 'Receipts', href: '/transactions' },
-      ],
-    },
-  ];
+  type Column = { title: string; links: { label: string; href: string }[] };
+
+  const productColumn: Column = {
+    title: 'Product',
+    links: [
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Orders', href: '/transactions' },
+      { label: 'Profit Analytics', href: '/analytics' },
+      { label: 'Expenses', href: '/expenses' },
+    ],
+  };
+
+  const resourcesColumn: Column = {
+    title: 'Resources',
+    links: [
+      { label: 'Getting Started', href: '/dashboard' },
+      { label: 'Ink Estimator', href: '/settings' },
+      { label: 'Receipts', href: '/transactions' },
+    ],
+  };
+
+  const accountColumn: Column = {
+    title: 'Account',
+    links: [
+      { label: 'Sign In', href: '/login' },
+      { label: 'Create Account', href: '/signup' },
+    ],
+  };
+
+  // Hide the Account column entirely when the user is logged in.
+  const columns: Column[] = isAuthenticated
+    ? [productColumn, resourcesColumn]
+    : [productColumn, resourcesColumn, accountColumn];
 
   return (
     <footer className="site-footer mt-auto">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
         {/* Top: brand block + resource columns */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-10">
           {/* Brand messaging */}
           <div className="md:col-span-5">
             <div className="flex items-center gap-2.5 mb-4">
@@ -77,8 +86,8 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Resource columns */}
-          <div className="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8">
+          {/* Resource columns — responsive column count adapts to how many exist */}
+          <div className={`md:col-span-7 grid gap-8 ${columns.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
             {columns.map((col) => (
               <div key={col.title}>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
@@ -105,14 +114,14 @@ export function Footer() {
         <div className="my-8 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
 
         {/* Bottom: legal / copyright */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <p className="text-xs text-slate-400 dark:text-slate-500">
             &copy; {year} Shanii Prints. All rights reserved.
           </p>
-          <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 text-xs text-slate-400 dark:text-slate-500">
             <Link href="/" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacy</Link>
             <Link href="/" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Terms</Link>
-            <span className="hidden sm:inline">Print shop management, simplified.</span>
+            <span className="hidden md:inline">Print shop management, simplified.</span>
           </div>
         </div>
       </div>

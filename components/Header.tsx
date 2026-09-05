@@ -56,7 +56,7 @@ export function Header() {
 
   return (
     <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
-      <header className="w-full max-w-5xl">
+      <header className="w-full max-w-5xl animate-header-in">
         <div className="header-glass rounded-full px-4 sm:px-6 py-3 flex items-center justify-between">
 
           {/* Brand — modern printer icon + wordmark */}

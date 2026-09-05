@@ -23,22 +23,29 @@
 
   body {
     @apply text-slate-900 dark:text-slate-100 antialiased selection:bg-primary-500/30;
-    /* Ambient light-mode depth: soft blue + green radial washes over a base tint
-       so pages never read as flat white. */
-    background-color: #eef4fa;
+    /* Eye-friendly gradient canvas: extremely low-saturation blue + green washes
+       over a soft neutral base. Kept very understated to avoid eye strain during
+       prolonged use. */
+    background-color: #f2f6f9;
     background-image:
-      radial-gradient(60rem 40rem at 15% -10%, rgba(14, 165, 233, 0.10), transparent 60%),
-      radial-gradient(50rem 40rem at 100% 0%, rgba(34, 197, 94, 0.09), transparent 55%),
-      radial-gradient(45rem 35rem at 50% 120%, rgba(14, 165, 233, 0.06), transparent 60%);
+      linear-gradient(180deg, #f4f8fb 0%, #eef4f3 100%),
+      radial-gradient(48rem 34rem at 12% -8%, rgba(14, 165, 233, 0.05), transparent 60%),
+      radial-gradient(42rem 32rem at 100% 4%, rgba(34, 197, 94, 0.045), transparent 58%),
+      radial-gradient(40rem 30rem at 50% 118%, rgba(14, 165, 233, 0.03), transparent 62%);
     background-attachment: fixed;
   }
 
+  /* Maximalist dark mode: vibrant, high-visibility multi-layered radial glows
+     over a deep base so the app reads as an immersive glassmorphic canvas. */
   .dark body {
-    background-color: #070b14;
+    background-color: #05070e;
     background-image:
-      radial-gradient(60rem 40rem at 15% -10%, rgba(14, 165, 233, 0.10), transparent 60%),
-      radial-gradient(50rem 40rem at 100% 0%, rgba(34, 197, 94, 0.08), transparent 55%),
-      radial-gradient(45rem 35rem at 50% 120%, rgba(14, 165, 233, 0.06), transparent 60%);
+      linear-gradient(180deg, #070b16 0%, #04060d 100%),
+      radial-gradient(46rem 34rem at 8% -6%, rgba(14, 165, 233, 0.22), transparent 58%),
+      radial-gradient(40rem 32rem at 102% 6%, rgba(34, 197, 94, 0.18), transparent 56%),
+      radial-gradient(38rem 30rem at 78% 108%, rgba(56, 189, 248, 0.16), transparent 60%),
+      radial-gradient(34rem 30rem at 20% 120%, rgba(34, 197, 94, 0.12), transparent 62%);
+    background-attachment: fixed;
   }
 
   html {
@@ -51,21 +58,22 @@
   /* Prominent glassmorphism: translucent fill, strong blur, frosted borders,
      inner top highlight + soft ambient shadow for depth in both themes. */
   .glass-card {
-    @apply bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-[1.5rem];
-    @apply shadow-[0_8px_30px_rgba(2,132,199,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)];
-    @apply ring-1 ring-white/40 dark:ring-white/5;
+    @apply bg-white/70 dark:bg-white/[0.06] backdrop-blur-xl border border-white/60 dark:border-white/15 rounded-[1.5rem];
+    @apply shadow-[0_8px_30px_rgba(2,132,199,0.08)] dark:shadow-[0_10px_40px_rgba(2,6,20,0.6),inset_0_1px_0_rgba(255,255,255,0.08)];
+    @apply ring-1 ring-white/40 dark:ring-white/10;
     @apply transition-all duration-500 ease-out;
   }
 
   .glass-card:hover {
-    @apply shadow-[0_16px_50px_rgba(2,132,199,0.12)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.6)];
+    @apply shadow-[0_16px_50px_rgba(2,132,199,0.12)] dark:shadow-[0_16px_60px_rgba(14,165,233,0.18),inset_0_1px_0_rgba(255,255,255,0.12)];
+    @apply dark:border-white/20;
   }
 
   /* === Header Glassmorphism === */
   .header-glass {
-    @apply bg-white/60 dark:bg-slate-950/50 backdrop-blur-2xl border border-white/60 dark:border-white/10;
-    @apply shadow-[0_8px_32px_rgba(2,132,199,0.10)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)];
-    @apply ring-1 ring-white/40 dark:ring-white/5;
+    @apply bg-white/60 dark:bg-white/[0.07] backdrop-blur-2xl border border-white/60 dark:border-white/15;
+    @apply shadow-[0_8px_32px_rgba(2,132,199,0.10)] dark:shadow-[0_12px_44px_rgba(2,6,20,0.65),inset_0_1px_0_rgba(255,255,255,0.10)];
+    @apply ring-1 ring-white/40 dark:ring-white/10;
   }
 
   /* === Stat Card === */
@@ -103,6 +111,17 @@
     @apply input appearance-none bg-no-repeat cursor-pointer pr-10;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-position: right 14px center;
+  }
+
+  /* === Soft input — for modals & login: subtle border, frosted fill,
+     ergonomic padding, gentle focus ring (no harsh prominent outline). === */
+  .input-soft {
+    @apply w-full px-4 py-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10;
+    @apply bg-slate-50/80 dark:bg-white/[0.04] backdrop-blur-sm;
+    @apply text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500;
+    @apply hover:border-slate-300 dark:hover:border-white/20;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500/25 focus:border-primary-400/70 focus:bg-white dark:focus:bg-white/[0.07];
+    @apply transition-all duration-200;
   }
 
   /* === Custom Dropdown (rounded-corner design tokens, consistent everywhere) === */
@@ -287,12 +306,17 @@
     background: radial-gradient(circle, rgba(34, 197, 94, 0.14) 0%, transparent 70%);
   }
 
+  /* Vibrant glowing ambient blobs in dark mode */
   .dark .blob-1 {
-    background: radial-gradient(circle, rgba(14, 165, 233, 0.10) 0%, transparent 70%);
+    @apply w-[32rem] h-[32rem];
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.28) 0%, transparent 68%);
+    animation: float 9s ease-in-out infinite;
   }
 
   .dark .blob-2 {
-    background: radial-gradient(circle, rgba(34, 197, 94, 0.09) 0%, transparent 70%);
+    @apply w-[36rem] h-[36rem];
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.24) 0%, transparent 68%);
+    animation: float 11s ease-in-out infinite;
   }
 
   /* === Shimmer Animation === */
@@ -352,6 +376,27 @@
 
   .animate-menu-drop {
     animation: menuDrop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Synchronized header entrance — slides down + fades in on every route load */
+  .animate-header-in {
+    animation: headerIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Staggered card entrance for the login card */
+  .animate-card-in {
+    animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes headerIn {
+    from { transform: translateY(-140%); opacity: 0; }
+    60% { opacity: 1; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes cardIn {
+    from { transform: translateY(28px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   @keyframes menuDrop {

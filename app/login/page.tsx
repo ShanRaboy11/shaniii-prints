@@ -8,8 +8,10 @@ import { signIn } from '@/lib/auth';
 import { useToast } from '@/components/ToastProvider';
 import { AnimatedDotGrid } from '@/components/AnimatedDotGrid';
 import { Footer } from '@/components/Footer';
+import { Header } from '@/components/Header';
+import { AuthProvider } from '@/components/AuthProvider';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -37,14 +39,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#070b14] relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#f4f8fb] dark:bg-[#05070e] relative overflow-hidden">
       {/* Interactive dot-matrix background — the only background visual here */}
       <AnimatedDotGrid />
 
-      <div className="relative flex-1 flex items-center justify-center px-4 pt-28 pb-12">
+      {/* Unauthenticated global header */}
+      <Header />
+
+      {/* First fold: exactly one viewport tall — header + centered card only.
+          The footer is pushed strictly below the fold. */}
+      <section className="relative h-screen flex items-center justify-center px-4 pt-28 pb-8">
         <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="text-center mb-8">
+          {/* Logo — staggered entrance */}
+          <div className="text-center mb-8 animate-card-in" style={{ animationDelay: '0.05s' }}>
             <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
               <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary-600 to-accent-400 flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
                 <Printer size={22} strokeWidth={2.5} />
@@ -58,10 +65,13 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Frosted, floating glassmorphic form card */}
-          <div className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-2xl border border-white/70 dark:border-white/15 rounded-3xl p-8 shadow-2xl shadow-primary-500/10 dark:shadow-black/60 ring-1 ring-white/40 dark:ring-white/5">
+          {/* Frosted, floating glassmorphic form card — staggered entrance */}
+          <div
+            className="relative bg-white/60 dark:bg-white/[0.07] backdrop-blur-2xl border border-white/70 dark:border-white/15 rounded-3xl p-8 shadow-2xl shadow-primary-500/10 dark:shadow-[0_20px_70px_rgba(2,6,20,0.7),inset_0_1px_0_rgba(255,255,255,0.10)] ring-1 ring-white/40 dark:ring-white/10 animate-card-in"
+            style={{ animationDelay: '0.18s' }}
+          >
             {/* subtle top-edge highlight for extra glass realism */}
-            <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/20 to-transparent" />
+            <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/70 dark:via-white/25 to-transparent" />
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div>
@@ -69,13 +79,13 @@ export default function LoginPage() {
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@email.com"
-                    className="input pl-11"
+                    className="input-soft pl-11"
                     autoComplete="email"
                   />
                 </div>
@@ -87,19 +97,19 @@ export default function LoginPage() {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="input pl-11 pr-11"
+                    className="input-soft pl-11 pr-11"
                     autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -129,7 +139,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-slate-200 dark:border-white/10" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-white dark:bg-slate-900 px-3 text-xs text-slate-400">or</span>
+                <span className="bg-white/80 dark:bg-transparent px-3 text-xs text-slate-400">or</span>
               </div>
             </div>
 
@@ -142,9 +152,18 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       <Footer />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  // Wrap in AuthProvider so the (unauthenticated) global Header renders correctly.
+  return (
+    <AuthProvider>
+      <LoginContent />
+    </AuthProvider>
   );
 }

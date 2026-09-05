@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import ChartSetup from '@/components/charts/ChartSetup';
 import { ErrorState } from '@/components/ErrorState';
+import { Dropdown } from '@/components/Dropdown';
 import { useOwnerData } from '@/lib/useOwnerData';
 import {
   TrendingUp,
@@ -27,6 +28,7 @@ import {
   sumExpenses,
   timeframeMetrics,
   TIMEFRAME_LABEL,
+  TIMEFRAME_TREND_LABEL,
   Timeframe,
 } from '@/lib/db';
 
@@ -38,10 +40,14 @@ const C = {
   accentDark: '#4ade80',
 };
 
+// Full timeframe range set (Monthly is the default).
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
+  { value: '6months', label: '6 Months' },
+  { value: 'yearly', label: 'Yearly' },
+  { value: 'all', label: 'All Time' },
 ];
 
 export default function AnalyticsPage() {
@@ -73,7 +79,7 @@ export default function AnalyticsPage() {
   const netProfit = totalRevenue - totalExpenses;
 
   const tfLabel = TIMEFRAME_LABEL[timeframe];
-  const trendLabel = timeframe === 'daily' ? 'Last 14 days' : timeframe === 'weekly' ? 'Last 8 weeks' : 'Last 6 months';
+  const trendLabel = TIMEFRAME_TREND_LABEL[timeframe];
 
   // Revenue chart
   const revenueChart = {
@@ -181,16 +187,19 @@ export default function AnalyticsPage() {
   return (
     <div className="animate-fade-in relative">
       <ChartSetup />
-      <div className="blob-1" />
-      <div className="blob-2" />
 
-      {/* Header + Timeframe segmented control */}
+      {/* Header + Timeframe filter (Daily / Weekly / Monthly / 6 Months / Yearly / All Time) */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="page-title">Analytics</h1>
           <p className="page-subtitle">Financial insights and performance metrics.</p>
         </div>
-        <Segmented value={timeframe} onChange={setTimeframe} options={TIMEFRAMES} />
+        <Dropdown
+          className="w-full sm:w-48"
+          value={timeframe}
+          onChange={(v) => setTimeframe(v as Timeframe)}
+          options={TIMEFRAMES}
+        />
       </div>
 
       {/* High-variance metric panels */}
@@ -228,7 +237,7 @@ export default function AnalyticsPage() {
       </div>
 
       {!hasData ? (
-        <div className="glass-card p-12 text-center">
+        <div className="rounded-2xl p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-sm">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center">
             <TrendingUp className="w-7 h-7 text-slate-300 dark:text-slate-600" />
           </div>
@@ -336,34 +345,7 @@ export default function AnalyticsPage() {
   );
 }
 
-/* ---------- Segmented control ---------- */
-function Segmented({ value, onChange, options }: { value: Timeframe; onChange: (v: Timeframe) => void; options: { value: Timeframe; label: string }[] }) {
-  return (
-    <div className="inline-flex p-1 rounded-2xl bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 ring-1 ring-white/40 dark:ring-white/5 shadow-sm self-start">
-      {options.map((o) => {
-        const active = o.value === value;
-        return (
-          <button
-            key={o.value}
-            onClick={() => onChange(o.value)}
-            className={`relative px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
-              active
-                ? 'text-white shadow-md'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            {active && (
-              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 -z-0" />
-            )}
-            <span className="relative z-10">{o.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ---------- High-variance metric panel ---------- */
+/* ---------- Clean white metric panel ---------- */
 type Tone = 'primary' | 'accent' | 'sky' | 'amber';
 
 function MetricPanel({
@@ -374,68 +356,41 @@ function MetricPanel({
   label: string;
   value: string;
   sub?: string;
-  trend?: number;
+  trend?: number | null;
   positive?: boolean;
   spark?: number[];
 }) {
-  const tones: Record<Tone, { grad: string; ring: string; iconBg: string; glow: string }> = {
-    primary: {
-      grad: 'from-primary-500/15 to-transparent',
-      ring: 'ring-primary-300/40 dark:ring-primary-400/20',
-      iconBg: 'bg-primary-100 dark:bg-primary-500/20 text-primary-600 dark:text-primary-300',
-      glow: 'bg-primary-400/20',
-    },
-    accent: {
-      grad: 'from-accent-500/15 to-transparent',
-      ring: 'ring-accent-300/40 dark:ring-accent-400/20',
-      iconBg: 'bg-accent-100 dark:bg-accent-500/20 text-accent-600 dark:text-accent-300',
-      glow: 'bg-accent-400/20',
-    },
-    sky: {
-      grad: 'from-sky-500/15 to-transparent',
-      ring: 'ring-sky-300/40 dark:ring-sky-400/20',
-      iconBg: 'bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300',
-      glow: 'bg-sky-400/20',
-    },
-    amber: {
-      grad: 'from-amber-500/15 to-transparent',
-      ring: 'ring-amber-300/40 dark:ring-amber-400/20',
-      iconBg: 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300',
-      glow: 'bg-amber-400/20',
-    },
+  // Minimalist: crisp white surface + a small tinted icon chip for accent.
+  const iconBg: Record<Tone, string> = {
+    primary: 'bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400',
+    accent: 'bg-accent-50 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400',
+    sky: 'bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400',
+    amber: 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400',
   };
-  const t = tones[tone];
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-5 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 ring-1 ${t.ring} shadow-[0_8px_30px_rgba(2,132,199,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:-translate-y-1 transition-all duration-300`}>
-      {/* tinted gradient wash */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${t.grad} pointer-events-none`} />
-      {/* muted glow blob */}
-      <div className={`absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl ${t.glow} pointer-events-none`} />
-
-      <div className="relative">
-        <div className="flex items-start justify-between">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.iconBg}`}>{icon}</div>
-          {typeof trend === 'number' && (
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              trend >= 0
-                ? 'bg-accent-100 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300'
-                : 'bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300'
-            }`}>
-              {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
-            </span>
-          )}
-        </div>
-
-        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-4">{label}</p>
-        <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 ${
-          positive === false ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
-        }`}>{value}</p>
-        {sub && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
-
-        {spark && spark.length > 1 && <Sparkline data={spark} tone={tone} />}
+    <div className="rounded-2xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+      <div className="flex items-start justify-between">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg[tone]}`}>{icon}</div>
+        {typeof trend === 'number' && (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+            trend >= 0
+              ? 'bg-accent-50 dark:bg-accent-500/15 text-accent-700 dark:text-accent-300'
+              : 'bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300'
+          }`}>
+            {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
+          </span>
+        )}
       </div>
+
+      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-4">{label}</p>
+      <p className={`text-xl sm:text-2xl font-extrabold mt-0.5 ${
+        positive === false ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+      }`}>{value}</p>
+      {sub && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
+
+      {spark && spark.length > 1 && <Sparkline data={spark} tone={tone} />}
     </div>
   );
 }
@@ -462,11 +417,10 @@ function Sparkline({ data, tone }: { data: number[]; tone: Tone }) {
   );
 }
 
-/* ---------- Reusable elevated glass panel ---------- */
+/* ---------- Clean white panel (minimalist, subtle border) ---------- */
 function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-5 sm:p-6 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/60 dark:border-white/10 ring-1 ring-white/40 dark:ring-white/5 shadow-[0_8px_30px_rgba(2,132,199,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] ${className}`}>
-      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/10 to-transparent" />
+    <div className={`rounded-2xl p-5 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-sm ${className}`}>
       {children}
     </div>
   );

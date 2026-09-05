@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   DollarSign,
@@ -16,6 +17,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { useOwnerData } from '@/lib/useOwnerData';
 import { ErrorState } from '@/components/ErrorState';
+import { TransactionModal } from '@/components/TransactionModal';
 import {
   TransactionRecord,
   txTodayRevenue,
@@ -31,7 +33,8 @@ import {
 
 export default function DashboardPage() {
   const { profile } = useAuth();
-  const { transactions, expenses, loading, error, reload } = useOwnerData();
+  const { transactions, expenses, settings, loading, error, reload } = useOwnerData();
+  const [showOrderModal, setShowOrderModal] = useState(false);
 
   if (loading) return <DashboardSkeleton />;
   if (error) return <div className="pt-4"><ErrorState message={error} onRetry={reload} /></div>;
@@ -65,6 +68,14 @@ export default function DashboardPage() {
       <div className="blob-1" />
       <div className="blob-2" />
 
+      {/* Shared New Order modal — opened by the quick-action card */}
+      <TransactionModal
+        open={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        onSaved={reload}
+        settings={settings}
+      />
+
       {/* Greeting — clean typography, no emoji/icon */}
       <div className="mb-8">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -88,8 +99,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Quick Action */}
-          <Link href="/transactions" className="block glass-card p-5 group">
+          {/* Quick Action — opens the New Order modal in-place */}
+          <button type="button" onClick={() => setShowOrderModal(true)} className="w-full text-left block glass-card p-5 group">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20 group-hover:shadow-primary-500/40 group-hover:scale-105 transition-all duration-300">
                 <Plus className="w-5 h-5 text-white" />
@@ -100,7 +111,7 @@ export default function DashboardPage() {
               </div>
               <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-primary-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </div>
-          </Link>
+          </button>
 
           {/* Today */}
           <div className="glass-card p-5">

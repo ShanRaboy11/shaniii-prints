@@ -410,7 +410,7 @@ export function txMonthlySeries(txs: TransactionRecord[], months = 6) {
 // TIMEFRAME-AWARE AGGREGATION (Daily / Weekly / Monthly)
 // ============================================
 
-export type Timeframe = 'daily' | 'weekly' | 'monthly';
+export type Timeframe = 'daily' | 'weekly' | 'monthly' | '6months' | 'yearly' | 'all';
 
 // Revenue trend series for the selected timeframe.
 //  - daily   → last 14 days
@@ -447,18 +447,58 @@ export function txSeries(txs: TransactionRecord[], timeframe: Timeframe): { labe
     return out;
   }
 
-  // monthly
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    out.push({
-      label: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
-      revenue: txMonthlyRevenue(txs, d.getFullYear(), d.getMonth()),
-    });
+  // monthly → last 6 months
+  if (timeframe === 'monthly') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({
+        label: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+        revenue: txMonthlyRevenue(txs, d.getFullYear(), d.getMonth()),
+      });
+    }
+    return out;
+  }
+
+  // 6months → last 6 months (same monthly buckets, distinct summary window)
+  if (timeframe === '6months') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({
+        label: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+        revenue: txMonthlyRevenue(txs, d.getFullYear(), d.getMonth()),
+      });
+    }
+    return out;
+  }
+
+  // yearly → last 12 months
+  if (timeframe === 'yearly') {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({
+        label: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+        revenue: txMonthlyRevenue(txs, d.getFullYear(), d.getMonth()),
+      });
+    }
+    return out;
+  }
+
+  // all → yearly buckets across the full transaction history
+  const years = txs
+    .map((t) => new Date(t.created_at || 0).getFullYear())
+    .filter((y) => y > 1970);
+  const minYear = years.length ? Math.min(...years) : now.getFullYear();
+  const maxYear = now.getFullYear();
+  for (let y = minYear; y <= maxYear; y++) {
+    const revenue = txs
+      .filter((t) => new Date(t.created_at || 0).getFullYear() === y)
+      .reduce((s, t) => s + (t.final_total || 0), 0);
+    out.push({ label: String(y), revenue });
   }
   return out;
 }
 
-// Start date for the current timeframe window (today / this week / this month).
+// Start date for the current timeframe window.
 export function timeframeStart(timeframe: Timeframe): Date {
   const now = new Date();
   if (timeframe === 'daily') {
@@ -469,6 +509,16 @@ export function timeframeStart(timeframe: Timeframe): Date {
     const diff = (day + 6) % 7; // days since Monday
     return new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
   }
+  if (timeframe === '6months') {
+    return new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  }
+  if (timeframe === 'yearly') {
+    return new Date(now.getFullYear(), 0, 1);
+  }
+  if (timeframe === 'all') {
+    return new Date(1970, 0, 1);
+  }
+  // monthly
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
@@ -477,6 +527,10 @@ export function timeframePrevStart(timeframe: Timeframe): Date {
   const start = timeframeStart(timeframe);
   if (timeframe === 'daily') return new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1);
   if (timeframe === 'weekly') return new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7);
+  if (timeframe === '6months') return new Date(start.getFullYear(), start.getMonth() - 6, 1);
+  if (timeframe === 'yearly') return new Date(start.getFullYear() - 1, 0, 1);
+  if (timeframe === 'all') return new Date(1970, 0, 1); // no meaningful previous period
+  // monthly
   return new Date(start.getFullYear(), start.getMonth() - 1, 1);
 }
 
@@ -517,7 +571,12 @@ export function timeframeMetrics(txs: TransactionRecord[], expenses: Expense[], 
   const orders = inWindow.length;
   const copies = inWindow.reduce((s, t) => s + t.quantity, 0);
   const avgOrder = orders > 0 ? curRevenue / orders : 0;
-  const growth = prevRevenue > 0 ? ((curRevenue - prevRevenue) / prevRevenue) * 100 : curRevenue > 0 ? 100 : 0;
+  // "All Time" has no meaningful previous period → suppress the growth pill.
+  const growth = timeframe === 'all'
+    ? null
+    : prevRevenue > 0
+      ? ((curRevenue - prevRevenue) / prevRevenue) * 100
+      : curRevenue > 0 ? 100 : 0;
 
   return {
     curRevenue,
@@ -536,6 +595,18 @@ export const TIMEFRAME_LABEL: Record<Timeframe, string> = {
   daily: 'Today',
   weekly: 'This Week',
   monthly: 'This Month',
+  '6months': 'Last 6 Months',
+  yearly: 'This Year',
+  all: 'All Time',
+};
+
+export const TIMEFRAME_TREND_LABEL: Record<Timeframe, string> = {
+  daily: 'Last 14 days',
+  weekly: 'Last 8 weeks',
+  monthly: 'Last 6 months',
+  '6months': 'Last 6 months',
+  yearly: 'Last 12 months',
+  all: 'By year',
 };
 
 export function txTotalInkCost(txs: TransactionRecord[]): number {
