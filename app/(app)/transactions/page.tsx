@@ -19,6 +19,7 @@ import { Dropdown } from '@/components/Dropdown';
 import { ErrorState } from '@/components/ErrorState';
 import { TransactionModal } from '@/components/TransactionModal';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { Modal } from '@/components/Modal';
 import { useOwnerData } from '@/lib/useOwnerData';
 import {
   TransactionRecord,
@@ -163,42 +164,38 @@ export default function TransactionsPage() {
       />
 
       {/* ===== QR CODE MODAL (view existing receipt) ===== */}
-      {showQR && (
-        <div className="modal-overlay" onClick={() => setShowQR(false)}>
-          <div className="modal !max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white mb-4">
-                <QrCode className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Receipt QR</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">Scan or share this QR code with the customer</p>
+      <Modal open={showQR} onClose={() => setShowQR(false)} panelClassName="!max-w-sm">
+        <div className="p-6 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white mb-4">
+            <QrCode className="w-7 h-7" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Receipt QR</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">Scan or share this QR code with the customer</p>
 
-              <div className="inline-block p-4 bg-white rounded-2xl shadow-lg mb-4">
-                <QRCodeSVG
-                  value={`${appUrl}/receipt/${qrReceiptId}`}
-                  size={180}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
+          <div className="inline-block p-4 bg-white rounded-2xl shadow-lg mb-4">
+            <QRCodeSVG
+              value={`${appUrl}/receipt/${qrReceiptId}`}
+              size={180}
+              level="M"
+              includeMargin={false}
+            />
+          </div>
 
-              <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mb-4 break-all">{qrReceiptId}</p>
+          <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mb-4 break-all">{qrReceiptId}</p>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { navigator.clipboard.writeText(`${appUrl}/receipt/${qrReceiptId}`); showToast('Link copied!', 'success'); }}
-                  className="btn-ghost flex-1 !rounded-xl"
-                >
-                  Copy Link
-                </button>
-                <button onClick={() => setShowQR(false)} className="btn-primary-gradient flex-1 !rounded-xl">
-                  Done
-                </button>
-              </div>
-            </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { navigator.clipboard.writeText(`${appUrl}/receipt/${qrReceiptId}`); showToast('Link copied!', 'success'); }}
+              className="btn-ghost flex-1 !rounded-xl"
+            >
+              Copy Link
+            </button>
+            <button onClick={() => setShowQR(false)} className="btn-primary-gradient flex-1 !rounded-xl">
+              Done
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">

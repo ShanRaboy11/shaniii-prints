@@ -293,14 +293,27 @@
   }
 
   /* === Modal === */
+  /* Backdrop fades its tint + blur in on mount and reverses on dismiss. */
   .modal-overlay {
-    @apply fixed inset-0 bg-slate-900/30 dark:bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-slate-900/30 dark:bg-black/60 z-50 flex items-center justify-center p-4;
+    animation: overlayIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .modal-overlay.modal-overlay--closing {
+    animation: overlayOut 0.2s cubic-bezier(0.4, 0, 1, 1) both;
   }
 
   .modal {
     @apply bg-white/90 dark:bg-[#0a1120]/90 backdrop-blur-2xl rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto;
-    @apply border border-white/60 dark:border-white/[0.14] ring-1 ring-white/40 dark:ring-white/10 animate-modal-in;
+    @apply border border-white/60 dark:border-white/[0.14] ring-1 ring-white/40 dark:ring-white/10;
     @apply shadow-[0_24px_70px_rgba(2,132,199,0.15)] dark:shadow-[0_28px_90px_rgba(0,0,0,0.8),0_0_40px_rgba(56,189,248,0.12),inset_0_1px_0_rgba(255,255,255,0.10)];
+    animation: modalIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .modal.modal--closing {
+    animation: modalOut 0.2s cubic-bezier(0.4, 0, 1, 1) both;
   }
 
   /* === Frosted sub-panel — groups related fields inside modals with a
@@ -479,8 +492,23 @@
   }
 
   @keyframes modalIn {
-    from { transform: scale(0.96) translateY(-6px); opacity: 0; }
+    from { transform: scale(0.95) translateY(12px); opacity: 0; }
     to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  @keyframes modalOut {
+    from { transform: scale(1) translateY(0); opacity: 1; }
+    to { transform: scale(0.95) translateY(12px); opacity: 0; }
+  }
+
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes overlayOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
   }
 
   @keyframes fadeIn {
@@ -538,6 +566,18 @@
   }
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Hide the native number-input spinner arrows (we provide custom -/+ steppers
+     that stay visible on mobile, where native spinners are not rendered). */
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 }
 

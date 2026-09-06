@@ -16,6 +16,7 @@ import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { Dropdown } from '@/components/Dropdown';
 import { DatePicker } from '@/components/DatePicker';
+import { Modal } from '@/components/Modal';
 import { ErrorState } from '@/components/ErrorState';
 import { useOwnerData } from '@/lib/useOwnerData';
 import {
@@ -325,19 +326,17 @@ export default function ExpensesPage() {
       )}
 
       {/* ===== ADD/EDIT MODAL ===== */}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                {editingId ? 'Edit Entry' : 'New Entry'}
-              </h3>
-              <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal open={showForm} onClose={() => setShowForm(false)}>
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            {editingId ? 'Edit Entry' : 'New Entry'}
+          </h3>
+          <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
               {/* ── Section: Entry Type ── */}
               <div className="modal-section">
                 <p className="modal-section-title">Entry Type</p>
@@ -452,17 +451,15 @@ export default function ExpensesPage() {
                 <span className="text-lg font-extrabold text-slate-900 dark:text-white">₱{totalCost.toLocaleString()}</span>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-ghost flex-1 !rounded-xl" disabled={saving}>Cancel</button>
-                <button type="submit" className="btn-primary-gradient flex-1 !rounded-xl" disabled={saving}>
-                  {saving ? 'Saving…' : editingId ? 'Update' : 'Save Entry'}
-                </button>
-              </div>
-            </form>
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={() => setShowForm(false)} className="btn-ghost flex-1 !rounded-xl" disabled={saving}>Cancel</button>
+            <button type="submit" className="btn-primary-gradient flex-1 !rounded-xl" disabled={saving}>
+              {saving ? 'Saving…' : editingId ? 'Update' : 'Save Entry'}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
   );
 }

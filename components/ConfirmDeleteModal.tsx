@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, X } from 'lucide-react';
+import { Modal } from '@/components/Modal';
 
 export interface ConfirmDeleteDetail {
   label: string;
@@ -36,11 +37,9 @@ export function ConfirmDeleteModal({
   onCancel,
   onConfirm,
 }: ConfirmDeleteModalProps) {
-  if (!open) return null;
-
   return (
-    <div className="modal-overlay" onClick={busy ? undefined : onCancel}>
-      <div className="modal !max-w-sm" onClick={(e) => e.stopPropagation()}>
+    <Modal open={open} onClose={onCancel} dismissOnBackdrop={!busy} panelClassName="!max-w-sm">
+      <>
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
           <div className="flex items-center gap-3">
@@ -94,7 +93,7 @@ export function ConfirmDeleteModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

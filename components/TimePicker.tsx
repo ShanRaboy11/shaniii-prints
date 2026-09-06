@@ -33,12 +33,19 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => i); // 0..59
 const PERIODS: ('AM' | 'PM')[] = ['AM', 'PM'];
 
 const ITEM_H = 40; // px height of each wheel row (must match markup)
+const VISIBLE_PAD = 2; // rows of padding above/below center
+// How many times to repeat the item list for the infinite buffer. The wheel
+// keeps the user near the middle copy and silently recenters on settle so
+// scrolling never reaches a hard top/bottom boundary.
+const LOOP_COPIES = 41; // odd number so there's a clean middle copy
 
 /**
  * WheelColumn
- * A single vertical tumbler. Uses native scroll + scroll-snap for smooth,
- * swipeable selection; the row nearest the vertical center is the selection.
- * Padding spacers above/below let the first and last items reach the center.
+ * A single vertical tumbler with native scroll inertia + snap-to-center.
+ * When `loop` is true the items are repeated into a large buffer and the
+ * scroll position is silently recentered to the middle copy after each settle,
+ * producing seamless infinite wrapping (past 59 → 00, past 12 → 01) with no
+ * visible top/bottom stop.
  */
 function WheelColumn<T extends string | number>({
   items,
@@ -46,41 +53,76 @@ function WheelColumn<T extends string | number>({
   onSelect,
   format = (v) => String(v),
   ariaLabel,
+  loop = false,
 }: {
   items: T[];
   selected: T;
   onSelect: (v: T) => void;
   format?: (v: T) => string;
   ariaLabel: string;
+  loop?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProgrammatic = useRef(false);
 
-  const indexOfSelected = Math.max(0, items.findIndex((i) => i === selected));
+  const n = items.length;
+  const selIndex = Math.max(0, items.findIndex((i) => i === selected));
 
-  // Center the selected item when it changes from outside (e.g. value prop).
+  // The rendered buffer: for a looping wheel we repeat the items; for a finite
+  // wheel (AM/PM) we render once with spacer padding.
+  const copies = loop ? LOOP_COPIES : 1;
+  const middleCopy = Math.floor(copies / 2);
+
+  // Absolute row index (within the buffer) that should sit at the center.
+  function centeredScrollTop(bufferIndex: number) {
+    return bufferIndex * ITEM_H;
+  }
+
+  // Sync scroll position when the selected value changes from outside, or on
+  // mount — always park on the middle copy so there's room to wrap both ways.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     isProgrammatic.current = true;
-    el.scrollTop = indexOfSelected * ITEM_H;
+    const bufferIndex = loop ? middleCopy * n + selIndex : selIndex;
+    el.scrollTop = centeredScrollTop(bufferIndex);
     const clear = setTimeout(() => { isProgrammatic.current = false; }, 60);
     return () => clearTimeout(clear);
-  }, [indexOfSelected]);
+  }, [selIndex, loop, n, middleCopy]);
 
   const handleScroll = useCallback(() => {
     const el = ref.current;
     if (!el || isProgrammatic.current) return;
     if (settleTimer.current) clearTimeout(settleTimer.current);
-    // Debounce: once scrolling settles, snap selection to nearest row.
+    // Debounce: once inertia settles, snap to the nearest row + report value.
     settleTimer.current = setTimeout(() => {
-      const idx = Math.round(el.scrollTop / ITEM_H);
-      const clamped = Math.min(items.length - 1, Math.max(0, idx));
-      const next = items[clamped];
-      if (next !== selected) onSelect(next);
-    }, 90);
-  }, [items, onSelect, selected]);
+      const rawIndex = Math.round(el.scrollTop / ITEM_H);
+      const value = items[((rawIndex % n) + n) % n];
+
+      if (loop) {
+        // Silently recenter to the equivalent row in the middle copy so the
+        // user always has a full buffer of rows above and below to keep going.
+        const valueIndex = ((rawIndex % n) + n) % n;
+        const recentered = middleCopy * n + valueIndex;
+        if (recentered !== rawIndex) {
+          isProgrammatic.current = true;
+          el.scrollTop = centeredScrollTop(recentered);
+          requestAnimationFrame(() => { isProgrammatic.current = false; });
+        }
+      }
+
+      if (value !== selected) onSelect(value);
+    }, 110);
+  }, [items, n, loop, middleCopy, onSelect, selected]);
+
+  // Build the rendered rows.
+  const rows: { key: string; item: T; bufferIndex: number }[] = [];
+  for (let c = 0; c < copies; c++) {
+    for (let i = 0; i < n; i++) {
+      rows.push({ key: `${c}-${i}`, item: items[i], bufferIndex: c * n + i });
+    }
+  }
 
   return (
     <div
@@ -90,13 +132,13 @@ function WheelColumn<T extends string | number>({
       aria-label={ariaLabel}
       className="wheel-column relative h-[200px] w-full overflow-y-auto snap-y snap-mandatory scrollbar-none"
     >
-      {/* top spacer (2 rows) so first item can center */}
-      <div style={{ height: ITEM_H * 2 }} aria-hidden />
-      {items.map((item) => {
+      {/* top spacer so the first reachable row can center */}
+      <div style={{ height: ITEM_H * VISIBLE_PAD }} aria-hidden />
+      {rows.map(({ key, item }) => {
         const isActive = item === selected;
         return (
           <button
-            key={String(item)}
+            key={key}
             type="button"
             role="option"
             aria-selected={isActive}
@@ -112,8 +154,8 @@ function WheelColumn<T extends string | number>({
           </button>
         );
       })}
-      {/* bottom spacer (2 rows) so last item can center */}
-      <div style={{ height: ITEM_H * 2 }} aria-hidden />
+      {/* bottom spacer so the last reachable row can center */}
+      <div style={{ height: ITEM_H * VISIBLE_PAD }} aria-hidden />
     </div>
   );
 }
@@ -233,6 +275,7 @@ export function TimePicker({ value, onChange, id, className = '' }: TimePickerPr
                 items={HOURS_12}
                 selected={hour12}
                 onSelect={(h) => onChange(toHM(h, minute, period))}
+                loop
               />
               <WheelColumn
                 ariaLabel="Minute"
@@ -240,6 +283,7 @@ export function TimePicker({ value, onChange, id, className = '' }: TimePickerPr
                 selected={minute}
                 onSelect={(m) => onChange(toHM(hour12, m, period))}
                 format={(m) => String(m).padStart(2, '0')}
+                loop
               />
               <WheelColumn
                 ariaLabel="AM or PM"

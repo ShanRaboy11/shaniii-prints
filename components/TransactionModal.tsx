@@ -9,6 +9,8 @@ import {
   ArrowUp,
   Copy,
   Check,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { toBlob } from 'html-to-image';
 import { useToast } from '@/components/ToastProvider';
@@ -17,6 +19,8 @@ import { Dropdown } from '@/components/Dropdown';
 import { DatePicker } from '@/components/DatePicker';
 import { TimePicker } from '@/components/TimePicker';
 import { DigitalReceipt } from '@/components/DigitalReceipt';
+import { Modal } from '@/components/Modal';
+import { RollingNumber } from '@/components/RollingNumber';
 import {
   TransactionRecord,
   BusinessSettings,
@@ -75,8 +79,11 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
 
   const formMode: 'add' | 'edit' = editingTx ? 'edit' : 'add';
 
-  // Receipt graphic modal (shown after a successful new order)
+  // Receipt graphic modal (shown after a successful new order). `receiptOpen`
+  // drives the animated Modal; `receiptTx` retains the data through the exit
+  // animation so the receipt doesn't vanish mid-transition.
   const [receiptTx, setReceiptTx] = useState<TransactionRecord | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -99,6 +106,10 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
 
   // Numeric derivations (empty / invalid → sensible fallback).
   const copiesNum = Math.max(1, parseInt(fCopies, 10) || 1);
+
+  // Stepper handlers for the bond-paper-sheets field (min 1).
+  const stepSheets = (delta: number) =>
+    setFCopies((v) => String(Math.max(1, (parseInt(v, 10) || 1) + delta)));
   const finalNum = fFinal.trim() === '' ? 0 : parseFloat(fFinal) || 0;
 
   function setNowDateTime() {
@@ -193,6 +204,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
         onClose();
         // Show the full receipt graphic (with image-copy) instead of a QR code.
         setReceiptTx(created ?? { ...txData, created_at: new Date().toISOString() });
+        setReceiptOpen(true);
         setCopied(false);
       } else if (editingTx?.id) {
         await updateTransactionDB(editingTx.id, txData);
@@ -251,48 +263,42 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
   return (
     <>
       {/* ===== RECEIPT GRAPHIC MODAL (after a new order) ===== */}
-      {receiptTx && (
-        <div className="modal-overlay" onClick={() => setReceiptTx(null)}>
-          <div className="modal !max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Receipt Generated</h3>
-              <button onClick={() => setReceiptTx(null)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal open={receiptOpen} onClose={() => setReceiptOpen(false)} panelClassName="!max-w-md">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Receipt Generated</h3>
+          <button onClick={() => setReceiptOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-            <div className="p-5">
-              {/* The receipt graphic (this exact node is captured to an image) */}
-              <div className="py-2 flex justify-center overflow-x-auto">
-                <DigitalReceipt ref={receiptRef} tx={receiptTx} />
-              </div>
+        <div className="p-5">
+          {/* The receipt graphic (this exact node is captured to an image) */}
+          <div className="py-2 flex justify-center overflow-x-auto">
+            {receiptTx && <DigitalReceipt ref={receiptRef} tx={receiptTx} />}
+          </div>
 
-              <div className="flex gap-2 mt-5">
-                <button onClick={() => setReceiptTx(null)} className="btn-ghost flex-1 !rounded-xl">
-                  Done
-                </button>
-                <button
-                  onClick={copyReceiptImage}
-                  disabled={copying}
-                  className="btn-primary-gradient flex-1 !rounded-xl"
-                >
-                  {copied ? <><Check className="w-4 h-4" /> Copied!</> : copying ? 'Copying…' : <><Copy className="w-4 h-4" /> Copy Receipt Image</>}
-                </button>
-              </div>
-            </div>
+          <div className="flex gap-2 mt-5">
+            <button onClick={() => setReceiptOpen(false)} className="btn-ghost flex-1 !rounded-xl">
+              Done
+            </button>
+            <button
+              onClick={copyReceiptImage}
+              disabled={copying}
+              className="btn-primary-gradient flex-1 !rounded-xl"
+            >
+              {copied ? <><Check className="w-4 h-4" /> Copied!</> : copying ? 'Copying…' : <><Copy className="w-4 h-4" /> Copy Receipt Image</>}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* ===== ADD/EDIT MODAL ===== */}
-      {open && (
-        <div className="modal-overlay" onClick={onClose}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                {formMode === 'add' ? 'New Order' : 'Edit Order'}
-              </h3>
-              <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
+      <Modal open={open} onClose={onClose}>
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-white/5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            {formMode === 'add' ? 'New Order' : 'Edit Order'}
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -354,18 +360,38 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
                   </div>
                   <div>
                     <label htmlFor="bond-sheets" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Bond Paper Sheets</label>
-                    <input
-                      id="bond-sheets"
-                      aria-label="Bond paper sheets"
-                      type="number"
-                      min="1"
-                      inputMode="numeric"
-                      value={fCopies}
-                      onChange={(e) => setFCopies(e.target.value)}
-                      onBlur={() => setFCopies((v) => (v.trim() === '' ? '1' : String(Math.max(1, parseInt(v, 10) || 1))))}
-                      className="input-soft text-center text-lg font-bold"
-                      placeholder="Sheets"
-                    />
+                    {/* Sheets stepper — custom -/+ arrows always visible (incl. mobile,
+                        where native number spinners are hidden). Compact + responsive. */}
+                    <div className="input-soft flex items-center gap-1 !px-2 !py-2">
+                      <button
+                        type="button"
+                        aria-label="Decrease sheets"
+                        onClick={() => stepSheets(-1)}
+                        className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-100/80 dark:bg-white/[0.06] hover:bg-primary-100 dark:hover:bg-primary-500/20 hover:text-primary-600 dark:hover:text-primary-300 active:scale-95 transition-all"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                      <input
+                        id="bond-sheets"
+                        aria-label="Bond paper sheets"
+                        type="number"
+                        min="1"
+                        inputMode="numeric"
+                        value={fCopies}
+                        onChange={(e) => setFCopies(e.target.value)}
+                        onBlur={() => setFCopies((v) => (v.trim() === '' ? '1' : String(Math.max(1, parseInt(v, 10) || 1))))}
+                        className="min-w-0 flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-center text-lg font-bold text-slate-900 dark:text-slate-100 no-spinner"
+                        placeholder="1"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Increase sheets"
+                        onClick={() => stepSheets(1)}
+                        className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-100/80 dark:bg-white/[0.06] hover:bg-primary-100 dark:hover:bg-primary-500/20 hover:text-primary-600 dark:hover:text-primary-300 active:scale-95 transition-all"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -392,9 +418,9 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
               {/* ── Section: Pricing ── */}
               <div className="modal-section space-y-2.5">
                 <p className="modal-section-title !mb-1">Pricing</p>
-                <div className="flex justify-between text-sm">
+                <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500 dark:text-slate-400">{copiesNum} sheet{copiesNum !== 1 ? 's' : ''} × ₱{pricePerCopy} <span className="text-[10px]">({fColored ? 'color' : 'b&w'})</span></span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">₱{computedTotal}</span>
+                  <RollingNumber value={computedTotal} prefix="₱" className="font-semibold text-slate-700 dark:text-slate-200" />
                 </div>
 
                 {/* Ink cost estimate */}
@@ -428,6 +454,12 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
                     {adjustment < 0 ? <><ArrowDown className="w-3.5 h-3.5" /> Discount: -₱{Math.abs(adjustment)}</> : <><ArrowUp className="w-3.5 h-3.5" /> Additional: +₱{adjustment}</>}
                   </div>
                 )}
+
+                {/* Grand total — odometer roll on every price change */}
+                <div className="flex items-center justify-between pt-2 mt-1 border-t border-slate-200/70 dark:border-white/10">
+                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Total</span>
+                  <RollingNumber value={Math.round(finalNum)} prefix="₱" className="text-2xl font-extrabold text-primary-600 dark:text-primary-400" />
+                </div>
               </div>
 
               {/* Actions */}
@@ -438,9 +470,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 }
