@@ -70,6 +70,13 @@
   html {
     @apply scroll-smooth;
   }
+
+  /* Prevent unwanted horizontal scrolling on mobile. Ambient decorative blobs
+     and full-bleed sections are intentionally clipped to the viewport width. */
+  html,
+  body {
+    @apply max-w-full overflow-x-hidden;
+  }
 }
 
 @layer components {

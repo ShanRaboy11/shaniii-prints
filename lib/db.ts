@@ -19,7 +19,15 @@ export interface BusinessSettings {
   cost_per_bw_page: number;
   cost_per_color_page: number;
   cost_per_sheet: number;
+  // Configurable default selling price per page (used as the base rate for the
+  // "Add Order" modal). Defaults: 3 for B&W, 5 for Colored.
+  default_bw_price: number;
+  default_color_price: number;
 }
+
+// Fallback default selling prices when settings are unset.
+export const DEFAULT_BW_PRICE = 3;
+export const DEFAULT_COLOR_PRICE = 5;
 
 export type PaperType =
   | 'short'
@@ -126,11 +134,33 @@ export const PRICING = {
   },
 } as const;
 
-export function getDefaultPrice(paperSize: string, isColored: boolean): number {
-  if (isColored) {
-    return PRICING.colored[paperSize as keyof typeof PRICING.colored] ?? 5;
+// Standard cut sizes use the owner-configurable base price; specialty stocks
+// (photo/sticker) keep their premium per-sheet rates from the PRICING table.
+const STANDARD_SIZES: PaperType[] = ['short', 'a4', 'long', 'bond'];
+
+/**
+ * getDefaultPrice
+ * Base selling price per page for a paper type. When `settings` is supplied,
+ * standard cut sizes use the owner-configured B&W / Colored base rates
+ * (defaulting to 3 / 5); specialty stocks retain their premium rates.
+ */
+export function getDefaultPrice(
+  paperSize: string,
+  isColored: boolean,
+  settings?: BusinessSettings | null
+): number {
+  const isStandard = STANDARD_SIZES.includes(paperSize as PaperType);
+  if (isStandard) {
+    if (isColored) {
+      return settings?.default_color_price ?? DEFAULT_COLOR_PRICE;
+    }
+    return settings?.default_bw_price ?? DEFAULT_BW_PRICE;
   }
-  return PRICING.bw[paperSize as keyof typeof PRICING.bw] ?? 3;
+  // Specialty stocks (photopaper, sticker) keep their catalog prices.
+  if (isColored) {
+    return PRICING.colored[paperSize as keyof typeof PRICING.colored] ?? DEFAULT_COLOR_PRICE;
+  }
+  return PRICING.bw[paperSize as keyof typeof PRICING.bw] ?? DEFAULT_BW_PRICE;
 }
 
 // --- Ink Cost Estimation ---
@@ -173,6 +203,24 @@ export function calculateDerivedCosts(settings: Partial<BusinessSettings>): {
   return { cost_per_bw_page, cost_per_color_page, cost_per_sheet };
 }
 
+// --- Sequential customer identifier fallback ---
+// Starting number for auto-generated customer identifiers.
+export const CUSTOMER_NUMBER_START = 1001;
+
+/**
+ * Next sequential customer identifier (e.g. "Customer #1001") derived from the
+ * existing transactions. Continues from the highest auto-generated number so
+ * the sequence never collides or resets.
+ */
+export function nextCustomerNumber(txs: TransactionRecord[]): string {
+  let maxNum = CUSTOMER_NUMBER_START - 1;
+  for (const t of txs) {
+    const m = /^Customer #(\d+)$/.exec((t.customer_name || '').trim());
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  }
+  return `Customer #${maxNum + 1}`;
+}
+
 // --- Generate Receipt ID ---
 
 export function generateReceiptId(): string {
@@ -193,7 +241,12 @@ export async function getBusinessSettings(ownerId: string): Promise<BusinessSett
     .single();
 
   if (error || !data) return null;
-  return data as BusinessSettings;
+  // Backfill price defaults so downstream code always sees numeric rates.
+  return {
+    default_bw_price: DEFAULT_BW_PRICE,
+    default_color_price: DEFAULT_COLOR_PRICE,
+    ...data,
+  } as BusinessSettings;
 }
 
 export async function upsertBusinessSettings(settings: Partial<BusinessSettings> & { owner_id: string }): Promise<BusinessSettings | null> {

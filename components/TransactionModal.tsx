@@ -40,6 +40,15 @@ function getValidPapers(type: PrintType): PaperSize[] {
     : PAPER_TYPES.map((p) => p.value);
 }
 
+/**
+ * Capitalize the first letter of each word as the user types, so customer
+ * names are consistently formatted (e.g. "juan dela cruz" → "Juan Dela Cruz").
+ * Preserves trailing spaces so multi-word entry stays fluid.
+ */
+function capitalizeName(value: string): string {
+  return value.replace(/(^|\s)([a-z])/g, (_m, sep, ch) => sep + ch.toUpperCase());
+}
+
 interface TransactionModalProps {
   open: boolean;
   onClose: () => void;
@@ -48,6 +57,8 @@ interface TransactionModalProps {
   /** When provided, the modal opens in edit mode for this transaction. */
   editingTx?: TransactionRecord | null;
   settings: BusinessSettings | null;
+  /** Sequential fallback identifier (e.g. "Customer #1001") when no name given. */
+  nextCustomerId?: string;
 }
 
 /**
@@ -57,7 +68,7 @@ interface TransactionModalProps {
  * without duplicating the ~150 lines of form + pricing logic. All business
  * logic (pricing, ink/paper estimates, DB writes) is preserved verbatim.
  */
-export function TransactionModal({ open, onClose, onSaved, editingTx, settings }: TransactionModalProps) {
+export function TransactionModal({ open, onClose, onSaved, editingTx, settings, nextCustomerId }: TransactionModalProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -118,14 +129,16 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
       setFCopies('1');
       setFCustomer('');
       setFNotes('');
-      setFFinal('0');
+      // Seed the final price with the calculated default (rate × qty) so it
+      // never flashes 0; the auto-sync effect keeps it in step until edited.
+      setFFinal(String(getDefaultPrice('short', false, settings) * 1));
       setFinalDirty(false);
       setNowDateTime();
     }
-  }, [open, editingTx]);
+  }, [open, editingTx, settings]);
 
-  // Computed price
-  const pricePerCopy = getDefaultPrice(fPaper, fColored);
+  // Computed price — standard sizes use the owner-configured base rates.
+  const pricePerCopy = getDefaultPrice(fPaper, fColored, settings);
   const computedTotal = pricePerCopy * copiesNum;
   const inkCost = estimateInkCost(settings, copiesNum, fColored);
   const paperCost = estimatePaperCost(settings, copiesNum);
@@ -151,11 +164,12 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
       return;
     }
 
-    const dateTime = new Date(`${fDate}T${fTime}`).toISOString();
+    // Fall back to a sequential customer identifier when no name is entered.
+    const customerName = fCustomer.trim() || nextCustomerId || 'Customer';
 
     const txData: Omit<TransactionRecord, 'id' | 'created_at'> = {
       owner_id: user.id,
-      customer_name: fCustomer || undefined,
+      customer_name: customerName,
       paper_size: fPaper,
       print_type: fType,
       is_colored: fColored,
@@ -293,7 +307,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings }
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Customer Name <span className="normal-case text-slate-400">(optional)</span></label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
-                    <input type="text" value={fCustomer} onChange={(e) => setFCustomer(e.target.value)} placeholder="Juan Dela Cruz" className="input-soft pl-10" />
+                    <input type="text" value={fCustomer} onChange={(e) => setFCustomer(capitalizeName(e.target.value))} placeholder="Juan Dela Cruz" className="input-soft pl-10" />
                   </div>
                 </div>
 

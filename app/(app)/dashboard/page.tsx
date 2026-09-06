@@ -28,6 +28,7 @@ import {
   sumExpenses,
   sumCapital,
   sumMonthlyExpenses,
+  nextCustomerNumber,
 } from '@/lib/db';
 
 export default function DashboardPage() {
@@ -72,6 +73,7 @@ export default function DashboardPage() {
         onClose={() => setShowOrderModal(false)}
         onSaved={reload}
         settings={settings}
+        nextCustomerId={nextCustomerNumber(transactions)}
       />
 
       {/* Greeting — clean typography, no emoji/icon */}

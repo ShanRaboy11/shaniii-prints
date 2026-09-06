@@ -15,13 +15,15 @@ import {
   Info,
   Database,
   Wallet,
+  Tag,
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { Dropdown } from '@/components/Dropdown';
 import {
-  BusinessSettings,
   PRINTER_PRESETS,
+  DEFAULT_BW_PRICE,
+  DEFAULT_COLOR_PRICE,
   calculateDerivedCosts,
   getBusinessSettings,
   upsertBusinessSettings,
@@ -42,6 +44,10 @@ export default function SettingsPage() {
   const [colorSetCost, setColorSetCost] = useState(0);
   const [paperCostPerReam, setPaperCostPerReam] = useState(0);
   const [sheetsPerReam, setSheetsPerReam] = useState(500);
+
+  // Configurable default selling prices (per page) for the Add Order modal.
+  const [bwPrice, setBwPrice] = useState(DEFAULT_BW_PRICE);
+  const [colorPrice, setColorPrice] = useState(DEFAULT_COLOR_PRICE);
 
   // General settings (using localStorage as fallback)
   const [capital, setCapital] = useState(0);
@@ -64,6 +70,8 @@ export default function SettingsPage() {
         setColorSetCost(s.color_set_cost);
         setPaperCostPerReam(s.paper_cost_per_ream);
         setSheetsPerReam(s.sheets_per_ream);
+        setBwPrice(s.default_bw_price ?? DEFAULT_BW_PRICE);
+        setColorPrice(s.default_color_price ?? DEFAULT_COLOR_PRICE);
       }
     } catch {
       // Supabase not configured yet — use defaults
@@ -117,6 +125,8 @@ export default function SettingsPage() {
         color_set_cost: colorSetCost,
         paper_cost_per_ream: paperCostPerReam,
         sheets_per_ream: sheetsPerReam,
+        default_bw_price: bwPrice,
+        default_color_price: colorPrice,
       });
 
       // Save general to localStorage too
@@ -203,6 +213,59 @@ export default function SettingsPage() {
       {/* ========== INK ESTIMATOR TAB ========== */}
       {activeTab === 'estimator' && (
         <div className="space-y-5 max-w-3xl">
+          {/* Default Pricing — configurable base selling price per page */}
+          <div className="glass-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Default Pricing</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Base selling price per page for new orders — applied instantly to future calculations</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Black &amp; White (₱ / page)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₱</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={bwPrice}
+                    onChange={(e) => setBwPrice(parseFloat(e.target.value) || 0)}
+                    className="input pl-8"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Default: ₱{DEFAULT_BW_PRICE}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Colored (₱ / page)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₱</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={colorPrice}
+                    onChange={(e) => setColorPrice(parseFloat(e.target.value) || 0)}
+                    className="input pl-8"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Default: ₱{DEFAULT_COLOR_PRICE}</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-3">
+              These rates set the base price for standard paper sizes (Short, A4, Long, Bond). Specialty stocks (Photo, Sticker) keep their premium rates.
+            </p>
+          </div>
+
           {/* Info Banner */}
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-primary-50/80 dark:bg-primary-500/5 border border-primary-200/50 dark:border-primary-500/20">
             <Info className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />

@@ -18,12 +18,14 @@ import { useToast } from '@/components/ToastProvider';
 import { Dropdown } from '@/components/Dropdown';
 import { ErrorState } from '@/components/ErrorState';
 import { TransactionModal } from '@/components/TransactionModal';
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { useOwnerData } from '@/lib/useOwnerData';
 import {
   TransactionRecord,
   PaperType,
   PAPER_TYPES,
   paperTypeLabel,
+  nextCustomerNumber,
   deleteTransactionDB,
 } from '@/lib/db';
 
@@ -42,6 +44,10 @@ export default function TransactionsPage() {
   const [showQR, setShowQR] = useState(false);
   const [qrReceiptId, setQrReceiptId] = useState('');
 
+  // Delete confirmation
+  const [pendingDelete, setPendingDelete] = useState<TransactionRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | PrintType>('all');
@@ -55,14 +61,23 @@ export default function TransactionsPage() {
   function openAdd() { setEditingTx(null); setShowForm(true); }
   function openEdit(tx: TransactionRecord) { setEditingTx(tx); setShowForm(true); }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Delete this transaction?')) return;
+  // Open the confirmation modal for a transaction.
+  function requestDelete(tx: TransactionRecord) {
+    setPendingDelete(tx);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete?.id) return;
+    setDeleting(true);
     try {
-      await deleteTransactionDB(id);
+      await deleteTransactionDB(pendingDelete.id);
       showToast('Deleted', 'info');
       await reload();
+      setPendingDelete(null);
     } catch (err: any) {
       showToast(err?.message || 'Error deleting', 'error');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -131,6 +146,20 @@ export default function TransactionsPage() {
         onSaved={reload}
         editingTx={editingTx}
         settings={settings}
+        nextCustomerId={nextCustomerNumber(transactions)}
+      />
+
+      {/* ===== DELETE CONFIRMATION ===== */}
+      <ConfirmDeleteModal
+        open={!!pendingDelete}
+        busy={deleting}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+        details={pendingDelete ? [
+          { label: 'Customer', value: pendingDelete.customer_name || 'Walk-in' },
+          { label: 'Order ID', value: pendingDelete.receipt_id || pendingDelete.id || '—' },
+          { label: 'Amount', value: `₱${pendingDelete.final_total}` },
+        ] : []}
       />
 
       {/* ===== QR CODE MODAL (view existing receipt) ===== */}
@@ -254,7 +283,7 @@ export default function TransactionsPage() {
                           <button onClick={(e) => { e.stopPropagation(); openEdit(tx); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(tx.id!); }} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                          <button onClick={(e) => { e.stopPropagation(); requestDelete(tx); }} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -326,7 +355,7 @@ export default function TransactionsPage() {
                         <button onClick={() => openEdit(tx)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(tx.id!)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                        <button onClick={() => requestDelete(tx)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
