@@ -53,6 +53,17 @@ function capitalizeName(value: string): string {
   return value.replace(/(^|\s)([a-z])/g, (_m, sep, ch) => sep + ch.toUpperCase());
 }
 
+/**
+ * Build an ISO timestamp from the date (YYYY-MM-DD) + time (HH:MM) pickers,
+ * interpreted in the user's local timezone. Falls back to "now" if either
+ * part is missing/invalid so we never write an invalid created_at.
+ */
+function buildTimestamp(date: string, time: string): string {
+  const local = new Date(`${date}T${(time || '00:00')}:00`);
+  if (Number.isNaN(local.getTime())) return new Date().toISOString();
+  return local.toISOString();
+}
+
 interface TransactionModalProps {
   open: boolean;
   onClose: () => void;
@@ -178,7 +189,12 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
     // Fall back to a sequential customer identifier when no name is entered.
     const customerName = fCustomer.trim() || nextCustomerId || 'Customer';
 
-    const txData: Omit<TransactionRecord, 'id' | 'created_at'> = {
+    // Build the event timestamp from the date + time pickers. This is the
+    // authoritative created_at for the transaction, so editing the pickers
+    // actually mutates the stored timestamp (and analytics recompute from it).
+    const createdAt = buildTimestamp(fDate, fTime);
+
+    const txData: Omit<TransactionRecord, 'id'> = {
       owner_id: user.id,
       customer_name: customerName,
       paper_size: fPaper,
@@ -193,6 +209,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
       estimated_ink_cost: parseFloat(inkCost.toFixed(4)),
       estimated_paper_cost: parseFloat(paperCost.toFixed(4)),
       notes: fNotes || undefined,
+      created_at: createdAt,
     };
 
     setSaving(true);
@@ -203,7 +220,7 @@ export function TransactionModal({ open, onClose, onSaved, editingTx, settings, 
         await onSaved();
         onClose();
         // Show the full receipt graphic (with image-copy) instead of a QR code.
-        setReceiptTx(created ?? { ...txData, created_at: new Date().toISOString() });
+        setReceiptTx(created ?? txData);
         setReceiptOpen(true);
         setCopied(false);
       } else if (editingTx?.id) {

@@ -11,6 +11,7 @@ import {
   PiggyBank,
   TrendingDown,
   Package,
+  ChevronDown,
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/components/AuthProvider';
@@ -46,6 +47,8 @@ export default function ExpensesPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | EntryType>('all');
+  // Which mobile card is expanded.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Form fields
   const [fEntryType, setFEntryType] = useState<EntryType>('expense');
@@ -263,57 +266,133 @@ export default function ExpensesPage() {
           </p>
         </div>
       ) : (
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Item</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((exp) => {
-                const d = new Date(exp.date_bought);
-                return (
-                  <tr key={exp.id}>
-                    <td className="text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                      {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
-                    </td>
-                    <td>
-                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{exp.item_name}</div>
-                      {exp.notes && <div className="text-[11px] text-slate-400 dark:text-slate-500 max-w-[180px] truncate">{exp.notes}</div>}
-                    </td>
-                    <td>
-                      <span className={`badge ${exp.entry_type === 'capital' ? 'badge-print' : 'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300'}`}>
-                        {exp.entry_type}
-                      </span>
-                    </td>
-                    <td className="text-sm text-slate-600 dark:text-slate-300">{categoryLabel(exp.entry_type, exp.category)}</td>
-                    <td className="font-semibold">{exp.quantity}</td>
-                    <td className="text-sm text-slate-600 dark:text-slate-300">₱{exp.unit_price.toLocaleString()}</td>
-                    <td className="font-bold text-slate-900 dark:text-white">₱{exp.total_cost.toLocaleString()}</td>
-                    <td>
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(exp)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
-                          <Edit3 className="w-3.5 h-3.5" />
+        <>
+          {/* ===== Desktop table (hidden on mobile) — center-aligned ===== */}
+          <div className="table-wrapper hidden md:block">
+            <table className="table text-center">
+              <thead>
+                <tr>
+                  <th className="text-center">Date</th>
+                  <th className="text-center">Item</th>
+                  <th className="text-center">Type</th>
+                  <th className="text-center">Category</th>
+                  <th className="text-center">Qty</th>
+                  <th className="text-center">Unit Price</th>
+                  <th className="text-center">Total</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((exp) => {
+                  const d = new Date(exp.date_bought);
+                  return (
+                    <tr key={exp.id}>
+                      <td className="text-center text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td className="text-center">
+                        <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{exp.item_name}</div>
+                        {exp.notes && <div className="text-[11px] text-slate-400 dark:text-slate-500 max-w-[180px] truncate mx-auto">{exp.notes}</div>}
+                      </td>
+                      <td className="text-center">
+                        <span className={`badge ${exp.entry_type === 'capital' ? 'badge-print' : 'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300'}`}>
+                          {exp.entry_type}
+                        </span>
+                      </td>
+                      <td className="text-center text-sm text-slate-600 dark:text-slate-300">{categoryLabel(exp.entry_type, exp.category)}</td>
+                      <td className="text-center font-semibold">{exp.quantity}</td>
+                      <td className="text-center text-sm text-slate-600 dark:text-slate-300">₱{exp.unit_price.toLocaleString()}</td>
+                      <td className="text-center font-bold text-slate-900 dark:text-white">₱{exp.total_cost.toLocaleString()}</td>
+                      <td className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => openEdit(exp)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(exp.id!)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ===== Mobile collapsible cards (hidden on desktop) ===== */}
+          <div className="md:hidden space-y-2.5">
+            {filtered.map((exp) => {
+              const d = new Date(exp.date_bought);
+              const isExpanded = expandedId === exp.id;
+              const isCapital = exp.entry_type === 'capital';
+              return (
+                <div key={exp.id} className="glass-card overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : exp.id!)}
+                    className="w-full flex items-center justify-between gap-3 p-4 text-left"
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                        {exp.item_name}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">₱{exp.total_cost.toLocaleString()}</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-1 border-t border-slate-100/70 dark:border-white/5 space-y-2.5 animate-fade-in">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Type</span>
+                        <span className={`badge ${isCapital ? 'badge-print' : 'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300'}`}>
+                          {exp.entry_type}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Category</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{categoryLabel(exp.entry_type, exp.category)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Qty</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{exp.quantity}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Unit Price</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">₱{exp.unit_price.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 dark:text-slate-400">Total</span>
+                        <span className="font-bold text-slate-900 dark:text-white">₱{exp.total_cost.toLocaleString()}</span>
+                      </div>
+                      {exp.notes && (
+                        <div className="flex items-start justify-between text-sm gap-3">
+                          <span className="text-slate-500 dark:text-slate-400 flex-shrink-0">Notes</span>
+                          <span className="text-slate-600 dark:text-slate-300 text-right">{exp.notes}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-end gap-1 pt-1">
+                        <button onClick={() => openEdit(exp)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors" aria-label="Edit">
+                          <Edit3 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(exp.id!)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
-                          <Trash2 className="w-3.5 h-3.5" />
+                        <button onClick={() => handleDelete(exp.id!)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Delete">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {filtered.length > 0 && (

@@ -280,7 +280,7 @@ export async function getTransactionsDB(ownerId: string, limit = 100): Promise<T
   return (data || []) as TransactionRecord[];
 }
 
-export async function addTransactionDB(tx: Omit<TransactionRecord, 'id' | 'created_at'>): Promise<TransactionRecord> {
+export async function addTransactionDB(tx: Omit<TransactionRecord, 'id'>): Promise<TransactionRecord> {
   const { data, error } = await supabase
     .from('transactions')
     .insert(tx)

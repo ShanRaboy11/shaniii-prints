@@ -78,6 +78,8 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
   // Month currently shown in the calendar grid.
   const [viewYear, setViewYear] = useState<number>((selected || today).getFullYear());
   const [viewMonth, setViewMonth] = useState<number>((selected || today).getMonth());
+  // Which panel is visible: the day grid, or the quick month/year chooser.
+  const [viewMode, setViewMode] = useState<'days' | 'monthYear'>('days');
 
   // Keep the viewed month in sync when the popover opens with a value.
   useEffect(() => {
@@ -85,6 +87,7 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
       const base = parseYMD(value) || new Date();
       setViewYear(base.getFullYear());
       setViewMonth(base.getMonth());
+      setViewMode('days');
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -174,69 +177,120 @@ export function DatePicker({ value, onChange, id, className = '' }: DatePickerPr
               : { top: rect.top + 6 }),
           }}
         >
-          {/* Month navigation */}
+          {/* Header — arrows step months; the centered label opens the
+              month + year quick chooser. */}
           <div className="flex items-center justify-between mb-2 px-1">
             <button
               type="button"
-              onClick={prevMonth}
+              onClick={viewMode === 'days' ? prevMonth : () => setViewYear((y) => y - 1)}
               className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
-              aria-label="Previous month"
+              aria-label={viewMode === 'days' ? 'Previous month' : 'Previous year'}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              {MONTHS[viewMonth]} {viewYear}
-            </span>
             <button
               type="button"
-              onClick={nextMonth}
+              onClick={() => setViewMode((m) => (m === 'days' ? 'monthYear' : 'days'))}
+              className="px-3 py-1 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
+              aria-label="Choose month and year"
+            >
+              {viewMode === 'days' ? `${MONTHS[viewMonth]} ${viewYear}` : `${viewYear}`}
+            </button>
+            <button
+              type="button"
+              onClick={viewMode === 'days' ? nextMonth : () => setViewYear((y) => y + 1)}
               className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
-              aria-label="Next month"
+              aria-label={viewMode === 'days' ? 'Next month' : 'Next year'}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Weekday header */}
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {WEEKDAYS.map((w) => (
-              <div key={w} className="h-7 flex items-center justify-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                {w}
-              </div>
-            ))}
-          </div>
-
-          {/* Day grid — rounded selection pills */}
-          <div className="grid grid-cols-7 gap-1">
-            {cells.map((day, i) => {
-              if (day === null) return <div key={`e-${i}`} className="h-9" />;
-              const cellDate = new Date(viewYear, viewMonth, day);
-              const isSelected = selected && sameDay(cellDate, selected);
-              const isToday = sameDay(cellDate, today);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => pick(day)}
-                  className={`h-9 rounded-full text-sm font-medium transition-all
-                    ${isSelected
-                      ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md shadow-primary-500/30'
-                      : isToday
-                        ? 'text-primary-600 dark:text-primary-300 ring-1 ring-inset ring-primary-300 dark:ring-primary-500/40 hover:bg-primary-50 dark:hover:bg-primary-500/10'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-700 dark:hover:text-primary-300'
+          {viewMode === 'monthYear' ? (
+            <>
+              {/* Year quick-list — scrollable range around the current year */}
+              <div className="flex gap-1 overflow-x-auto scrollbar-none py-1 mb-2">
+                {Array.from({ length: 12 }, (_, i) => today.getFullYear() - 6 + i).map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => setViewYear(y)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      y === viewYear
+                        ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-300'
                     }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+
+              {/* Month grid — pick a month, then drop back to the day view */}
+              <div className="grid grid-cols-3 gap-1.5">
+                {MONTHS.map((m, idx) => {
+                  const isActive = idx === viewMonth;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => { setViewMonth(idx); setViewMode('days'); }}
+                      className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                        isActive
+                          ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md shadow-primary-500/30'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-700 dark:hover:text-primary-300'
+                      }`}
+                    >
+                      {m.slice(0, 3)}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Weekday header */}
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {WEEKDAYS.map((w) => (
+                  <div key={w} className="h-7 flex items-center justify-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    {w}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day grid — rounded selection pills */}
+              <div className="grid grid-cols-7 gap-1">
+                {cells.map((day, i) => {
+                  if (day === null) return <div key={`e-${i}`} className="h-9" />;
+                  const cellDate = new Date(viewYear, viewMonth, day);
+                  const isSelected = selected && sameDay(cellDate, selected);
+                  const isToday = sameDay(cellDate, today);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => pick(day)}
+                      className={`h-9 rounded-full text-sm font-medium transition-all
+                        ${isSelected
+                          ? 'bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-md shadow-primary-500/30'
+                          : isToday
+                            ? 'text-primary-600 dark:text-primary-300 ring-1 ring-inset ring-primary-300 dark:ring-primary-500/40 hover:bg-primary-50 dark:hover:bg-primary-500/10'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:text-primary-700 dark:hover:text-primary-300'
+                        }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* Today shortcut */}
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/5">
             <button
               type="button"
-              onClick={() => { onChange(toYMD(today)); setOpen(false); }}
+              onClick={() => { onChange(toYMD(today)); setViewMode('days'); setOpen(false); }}
               className="w-full py-2 rounded-xl text-xs font-semibold text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors"
             >
               Today
